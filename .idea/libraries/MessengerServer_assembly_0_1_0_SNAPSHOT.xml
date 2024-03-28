@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="MessengerServer-assembly-0.1.0-SNAPSHOT">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/MessengerServer-assembly-0.1.0-SNAPSHOT.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
