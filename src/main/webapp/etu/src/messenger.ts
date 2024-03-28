@@ -193,9 +193,13 @@ async function sendMessage(agentName: string, receiverName: string, messageConte
 sendButton.onclick = async function () {
     let agentName = globalUserName
     let receiverName = receiver.value
+    let contentToEncrypt = JSON.stringify([agentName, message.value])
     try {
+        const kb = await fetchKey(receiverName, true, true)
+        // We encrypt
+        const encryptedMessage = await encryptWithPublicKey(kb, contentToEncrypt)
         // And send
-        const sendResult = await sendMessage(agentName, receiverName, message.value)
+        const sendResult = await sendMessage(agentName, receiverName, encryptedMessage)
         if (!sendResult.success) console.log(sendResult.errorMessage)
         else {
             console.log("Successfully sent the message!")
@@ -212,6 +216,61 @@ sendButton.onclick = async function () {
     }
 }
 
+// Parsing/Recognizing a message sent to app_user
+// The first element of the tuple is a boolean saying if the message was for the user
+// If this boolean is true, then the second element is the name of the sender
+// and the third is the content of the message
+async function analyseMessage(message: ExtMessage): Promise<[boolean, string, string]> {
+    const user = globalUserName
+    try {
+        const messageSender = message.sender
+        const messageContent = message.content
+        if (message.receiver !== user) {
+            // If the message is not sent to the user, we do not consider it
+            return [false, "", ""]
+        }
+        else {
+            //we fetch user private key to decrypt the message
+            try {
+                const privkey = await fetchKey(user, false, true)
+                const messageInClearString = await decryptWithPrivateKey(privkey, messageContent)
+                // The next lines contain several intentional programming errors
+                // 1) This is not the safest way to obtain an object from a JSON string!
+                const messageArrayInClear = eval(`${messageInClearString}`) as string[]
+                const messageSenderInMessage = messageArrayInClear[0]
+                const messageInClear = messageArrayInClear[1]
+                if (messageSenderInMessage == messageSender) {
+                    if (messageInClear.indexOf("\\") == -1) {
+                        return [true, messageSender, messageInClear]
+                    } else {
+                        // If the string contains escaped characters like \" \n etc
+                        // we remove them using eval.
+                        // Using eval to build a value is *always* a bad programming practice
+                        const result = `[true, messageSender, ${messageInClear}]`
+                        return eval(`${result}`)
+                    }
+                }
+                else {
+                    console.log("Real message sender and message sender name in the message do not coincide")
+                }
+            } catch (e) {
+                console.log("analyseMessage: decryption failed because of " + e)
+                return [false, "", ""]
+            }
+        }
+    } catch (e) {
+        console.log("analyseMessage: decryption failed because of " + e)
+        return [false, "", ""]
+    }
+}
+
+// action for receiving message
+// 1. A -> B: A,{message}Kb
+function actionOnMessageOne(fromA: string, messageContent: string) {
+    const user = globalUserName
+    const textToAdd = `${fromA} -> ${user} : ${messageContent}`
+    addingReceivedMessage(textToAdd)
+}
 
 //Index of the last read message
 let lastIndexInHistory = 0
@@ -241,11 +300,11 @@ async function refresh() {
             //addingReceivedMessage("Dummy message!")
             console.log(result)
             if(result.index >= lastIndexInHistory) {
-                console.log("je suis dans le if avant ma boucle for")
+                //console.log("je suis dans le if avant ma boucle for")
                 for(let i=0; i<result.allMessages.length; i++ ){
-                    if( result.allMessages[i].receiver === globalUserName) {
-                        addingReceivedMessage(result.allMessages[i].content)
-                    }
+                    let [b, sender, msgContent] = await analyseMessage(result.allMessages[i])
+                    if (b) actionOnMessageOne(sender, msgContent)
+                    else console.log("Msg " + result.allMessages[i] + " cannot be exploited by " + user)
                     lastIndexInHistory++
                 }
             }
