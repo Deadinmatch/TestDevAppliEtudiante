@@ -45,7 +45,7 @@ const userButtonLabel = document.getElementById("user-name") as HTMLLabelElement
 
 const sendButton = document.getElementById("send-button") as HTMLButtonElement
 const receiver = document.getElementById("receiver") as HTMLInputElement
-const message = document.getElementById("message") as HTMLInputElement
+const messageHTML = document.getElementById("message") as HTMLInputElement
 const received_messages = document.getElementById("exchanged-messages") as HTMLLabelElement
 
 let globalUserName = ""
@@ -63,7 +63,7 @@ function stringToHTML(str: string): HTMLDivElement {
 }
 
 function addingReceivedMessage(message: string) {
-    received_messages.append(stringToHTML('<p></p><p></p>' + message))
+    received_messages.append(stringToHTML(`<p></p><p></p>` + message))
 }
 
 // WARNING!
@@ -190,10 +190,15 @@ async function sendMessage(agentName: string, receiverName: string, messageConte
     }
 }
 
+let messageStatic = ""
+
+
 sendButton.onclick = async function () {
+    nonceA = generateNonce()
     let agentName = globalUserName
     let receiverName = receiver.value
-    let contentToEncrypt = JSON.stringify([agentName, message.value])
+    messageStatic = messageHTML.value
+    let contentToEncrypt = JSON.stringify([agentName])
     try {
         const kb = await fetchKey(receiverName, true, true)
         // We encrypt
@@ -204,7 +209,7 @@ sendButton.onclick = async function () {
         else {
             console.log("Successfully sent the message!")
             // We add the message to the list of sent messages
-            const textToAdd = `<font color="blue"> ${agentName} -> ${receiverName} : ${message.value} </font>`
+            const textToAdd = `<font color="blue" id="${nonceA}"> ${agentName} -> ${receiverName} : ${messageHTML.value} </font>`
             addingReceivedMessage(textToAdd)
         }
     } catch (e) {
@@ -215,6 +220,9 @@ sendButton.onclick = async function () {
         }
     }
 }
+
+let nonceB = ""
+let nonceA
 
 // Parsing/Recognizing a message sent to app_user
 // The first element of the tuple is a boolean saying if the message was for the user
@@ -234,25 +242,110 @@ async function analyseMessage(message: ExtMessage): Promise<[boolean, string, st
             try {
                 const privkey = await fetchKey(user, false, true)
                 const messageInClearString = await decryptWithPrivateKey(privkey, messageContent)
-                // The next lines contain several intentional programming errors
-                // 1) This is not the safest way to obtain an object from a JSON string!
-                const messageArrayInClear = eval(`${messageInClearString}`) as string[]
+                //console.log(messageInClearString)
+
+                const messageArrayInClear = JSON.parse(messageInClearString) as string[];
                 const messageSenderInMessage = messageArrayInClear[0]
-                const messageInClear = messageArrayInClear[1]
-                if (messageSenderInMessage == messageSender) {
-                    if (messageInClear.indexOf("\\") == -1) {
-                        return [true, messageSender, messageInClear]
-                    } else {
-                        // If the string contains escaped characters like \" \n etc
-                        // we remove them using eval.
-                        // Using eval to build a value is *always* a bad programming practice
-                        const result = `[true, messageSender, ${messageInClear}]`
-                        return eval(`${result}`)
-                    }
+                switch (messageArrayInClear.length) {
+                    //demande envoie de nonce pour authentifie
+                    case 1:
+                        let agentName = globalUserName
+                        nonceB = generateNonce()
+                        let contentToEncrypt = JSON.stringify([agentName, nonceB])
+                        try {
+                            const kb = await fetchKey(messageSenderInMessage, true, true)
+                            // We encrypt
+                            const encryptedMessage = await encryptWithPublicKey(kb, contentToEncrypt)
+                            // And send
+                            const sendResult = await sendMessage(agentName, messageSenderInMessage, encryptedMessage)
+                            if (!sendResult.success) console.log(sendResult.errorMessage)
+                            else {
+                                console.log("Successfully sent the nonce!")
+                            }
+                        } catch (e) {
+                            if (e instanceof Error) {
+                                console.log('error nonce: ', e.message)
+                            } else {
+                                console.log('unexpected error: ', e);
+                            }
+                        }
+                        break;
+                    //reception de la nonce on renvoie le message avec la nonce
+                    case 2:
+                        if (messageSenderInMessage == messageSender) {
+                            const nonce = messageArrayInClear[1] //nonce reçu
+                            let agentName = globalUserName
+                            let contentToEncrypt = JSON.stringify([agentName, nonce, nonceA, messageStatic])
+                            try {
+                                const kb = await fetchKey(messageSenderInMessage, true, true)
+                                // We encrypt
+                                const encryptedMessage = await encryptWithPublicKey(kb, contentToEncrypt)
+                                // And send
+                                const sendResult = await sendMessage(agentName, messageSenderInMessage, encryptedMessage)
+                                if (!sendResult.success) console.log(sendResult.errorMessage)
+                                else {
+                                    console.log("Successfully sent the nonce and secret!")
+                                }
+                            } catch (e) {
+                                if (e instanceof Error) {
+                                    console.log('error nonce: ', e.message)
+                                } else {
+                                    console.log('unexpected error: ', e);
+                                }
+                            }
+                        }
+                        break;
+                    //message reçu authentifié --> 3.
+                    case 4:
+                        const nonce = messageArrayInClear[1]
+                        const messageInClear = messageArrayInClear[3]
+                        if (messageSenderInMessage == messageSender && nonce == nonceB) {
+                            const noncea = messageArrayInClear[2] //nonce reçu
+                            let agentName = globalUserName
+                            let contentToEncrypt = JSON.stringify([agentName, noncea, messageStatic])
+                            try {
+                                const kb = await fetchKey(messageSenderInMessage, true, true)
+                                // We encrypt
+                                const encryptedMessage = await encryptWithPublicKey(kb, contentToEncrypt)
+                                // And send
+                                const sendResult = await sendMessage(agentName, messageSenderInMessage, encryptedMessage)
+                                if (!sendResult.success) console.log(sendResult.errorMessage)
+                                else {
+                                    console.log("Successfully sent the acquit !")
+                                }
+                            } catch (e) {
+                                if (e instanceof Error) {
+                                    console.log('error nonce: ', e.message)
+                                } else {
+                                    console.log('unexpected error: ', e);
+                                }
+                            }
+                            return [true, messageSender, messageInClear]
+                        } else {
+                            console.log("Real message sender and message sender name in the message do not coincide")
+                        }
+                        break;
+
+                    case 3: //acquit --> 4.
+                        const noncea = messageArrayInClear[1]
+                        if(messageSenderInMessage == messageSender && noncea == nonceA){
+                            const messageInClear = messageArrayInClear[2]
+                            console.log("acquit succesfull ", noncea)
+                            //return [true, messageSender, messageInClear]
+                            const messageAquitte=document.getElementById(''+noncea)
+                            console.log(messageAquitte)
+                            messageAquitte.style.color='green'
+
+                        }
+                        else{
+                            console.log("Acquit fail")
+                        }
+
+
+
+                        break;
                 }
-                else {
-                    console.log("Real message sender and message sender name in the message do not coincide")
-                }
+
             } catch (e) {
                 console.log("analyseMessage: decryption failed because of " + e)
                 return [false, "", ""]
@@ -299,16 +392,15 @@ async function refresh() {
             // This is the place where you can perform trigger any operations for refreshing the page
             //addingReceivedMessage("Dummy message!")
             console.log(result)
-            if(result.index >= lastIndexInHistory) {
+            lastIndexInHistory = result.index
+            if (result.allMessages.length != 0) {
                 //console.log("je suis dans le if avant ma boucle for")
                 for(let i=0; i<result.allMessages.length; i++ ){
                     let [b, sender, msgContent] = await analyseMessage(result.allMessages[i])
                     if (b) actionOnMessageOne(sender, msgContent)
                     else console.log("Msg " + result.allMessages[i] + " cannot be exploited by " + user)
-                    lastIndexInHistory++
                 }
             }
-
         }
     }
     catch (error) {
