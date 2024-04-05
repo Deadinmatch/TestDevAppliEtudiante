@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="overflow-x: hidden">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,26 +11,26 @@
       }
     </style>
   </head>
-  <body class="pb-20">
-    <label class="p-3 bg-black text-white w-full m-3 rounded" id="user-name"
+  <body class="py-20">
+    <label
+      class="p-3 fixed top-0 left-0 bg-black text-white w-max rounded"
+      id="user-name"
       >CAS User</label
     >
-    <hr />
-    <div class="flex my-5 px-2 justify-center">
-      <div class="pt-1">Reciever :</div>
-      <input
-        type="text"
-        id="receiver"
-        class="p-1 mx-2 rounded"
-        size="25"
-        placeholder="bob@univ-rennes.fr"
-        value="bob@univ-rennes.fr"
-      />
-    </div>
-    <hr />
+
     <div id="exchanged-messages"></div>
-    <hr />
+    <!--input text and reciever-->
     <div class="flex justify-center fixed bottom-0 left-0 w-full">
+      <div class="flex pt-2 bg-pink-500 p-2 rounded">
+        <div class="pt-2">Reciever:</div>
+        <input
+          type="text"
+          id="receiver"
+          class="p-1 mx-2 rounded h-10"
+          placeholder="bob@univ-rennes.fr"
+          value="bob@univ-rennes.fr"
+        />
+      </div>
       <input
         class="p-2 text-white rounded w-3/4 bg-blue-600 focus:bg-blue-500 m-2"
         type="text"
