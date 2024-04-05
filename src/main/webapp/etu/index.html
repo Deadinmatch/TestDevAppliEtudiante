@@ -13,11 +13,11 @@
   </head>
   <body class="py-20">
     <div class="fixed top-0 left-0 flex bg-gray-600 w-full">
-      <span class="pt-3 bg-black text-white p-1">FROM</span>
-      <label class="p-3 bg-black text-white w-max rounded" id="user-name"
+      <span class="pt-4 bg-black text-white p-1">De</span>
+      <label class="p-4 bg-black text-white w-max rounded" id="user-name"
         >CAS User</label
       >
-      <div class="bg-pink-500 p-2 pt-3">TO</div>
+      <div class="bg-pink-500 p-2 pt-4">vers</div>
 
       <div class="flex bg-pink-500 p-2">
         <input
@@ -32,35 +32,73 @@
 
     <div id="exchanged-messages"></div>
     <!--input text and reciever-->
-    <div class="flex justify-center fixed bottom-0 left-0 w-full">
-      <input
-        class="p-2 text-white rounded w-11/12 bg-blue-600 focus:bg-blue-500 my-2"
-        type="text"
-        id="message"
-        placeholder="Ceci est mon premier message"
-        value="Ceci est mon premier message"
-      />
-      <button
-        class="bg-green-600 hover:bg-green-500 my-2 ml-1 p-2 rounded-md"
-        id="send-button"
-        type="button"
-        *
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="w-6 h-6"
+    <div class="fixed bottom-0 left-0 w-full">
+      <!-- <div id="reponsea" class="hidden bg-black flex text-white w-full p-2">
+        <div id="reponseaText" class="truncate w-11/12">Reponse à :</div>
+        <span
+          onclick="annullerRep()"
+          class="p-1 rounded bg-red-600 hover:bg-red-500 cursor-pointer"
+          >x</span
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
-          />
-        </svg>
-      </button>
+      </div> -->
+      <div class="flex justify-center">
+        <!--message input -->
+        <input
+          class="p-2 text-white rounded w-11/12 bg-blue-600 focus:bg-blue-500 my-2"
+          type="text"
+          id="message"
+          placeholder="Ceci est mon premier message"
+          value="Ceci est mon premier message"
+        />
+        <!--send button-->
+        <button
+          class="bg-green-600 hover:bg-green-500 my-2 ml-1 p-2 rounded-md"
+          id="send-button"
+          type="button"
+          *
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="w-6 h-6"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+    <!--settings-->
+    <div
+      onclick="toogleSettings('')"
+      id="settings"
+      class="hidden fixed w-full h-full bottom-0 left-0"
+    >
+      <div
+        class="bg-black flex justify-center space-x-1 items-center text-white fixed bottom-0 w-full min-h-20"
+      >
+        <button
+          class="bg-red-600 hover:bg-red-500 h-max min-w-28 p-2 rounded"
+          onclick="deleteForMe()"
+        >
+          Supprimer pour moi
+        </button>
+        <!-- <button class="bg-green-600 h-max min-w-28 p-2 rounded" onclick="rep()">
+          repondre
+        </button>-->
+        <button
+          class="bg-orange-600 hover:bg-orange-500 h-max min-w-28 p-2 rounded"
+          onclick="toogleSettings('')"
+        >
+          Annuler
+        </button>
+      </div>
     </div>
   </body>
   <script src="JS/messenger.js"></script>
