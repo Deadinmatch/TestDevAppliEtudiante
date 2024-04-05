@@ -1,29 +1,66 @@
 <!DOCTYPE html>
-<html lang="fr">
-
-<head>
-    <meta charset="UTF-8">
-    <title>Messenger Etu</title>
-</head>
-</b>
-
-<body>
-    Acting for: <label id="user-name">CAS User</label>
-    <p></p>
-    Send message to : <input type="text" id="receiver" size="25" value="bob@univ-rennes.fr">
-    <p></p>
-    Content: <input type="text" id="message" size="50" value="Ceci est mon premier message">
-    <input id="send-button" type="button" value="Send">
-    <p></p>
-    <p></p>
-    <hr>
-    <p></p>
-    <label>Messages: </label>
-    <p></p>
-    <label id="exchanged-messages"></label>
-    <p></p>
-    <hr>
-</body>
-<script src="JS/messenger.js"></script>
-
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Etu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      input {
+        border: 1px solid black;
+      }
+    </style>
+  </head>
+  <body class="pb-20">
+    <label class="p-3 bg-black text-white w-full m-3 rounded" id="user-name"
+      >CAS User</label
+    >
+    <hr />
+    <div class="flex my-5 px-2 justify-center">
+      <div class="pt-1">Reciever :</div>
+      <input
+        type="text"
+        id="receiver"
+        class="p-1 mx-2 rounded"
+        size="25"
+        placeholder="bob@univ-rennes.fr"
+        value="bob@univ-rennes.fr"
+      />
+    </div>
+    <hr />
+    <div id="exchanged-messages"></div>
+    <hr />
+    <div class="flex justify-center fixed bottom-0 left-0 w-full">
+      <input
+        class="p-2 text-white rounded w-3/4 bg-blue-600 focus:bg-blue-500 m-2"
+        type="text"
+        id="message"
+        size="50"
+        placeholder="Ceci est mon premier message"
+        value="Ceci est mon premier message"
+      />
+      <button
+        class="bg-green-600 hover:bg-green-500 m-2 p-2 rounded-md"
+        id="send-button"
+        type="button"
+        *
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="w-6 h-6"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
+          />
+        </svg>
+      </button>
+    </div>
+  </body>
+  <script src="JS/messenger.js"></script>
 </html>
