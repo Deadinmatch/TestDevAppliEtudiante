@@ -12,17 +12,14 @@
     </style>
   </head>
   <body class="py-20">
-    <label
-      class="p-3 fixed top-0 left-0 bg-black text-white w-max rounded"
-      id="user-name"
-      >CAS User</label
-    >
+    <div class="fixed top-0 left-0 flex bg-gray-600 w-full">
+      <span class="pt-3 bg-black text-white p-1">FROM</span>
+      <label class="p-3 bg-black text-white w-max rounded" id="user-name"
+        >CAS User</label
+      >
+      <div class="bg-pink-500 p-2 pt-3">TO</div>
 
-    <div id="exchanged-messages"></div>
-    <!--input text and reciever-->
-    <div class="flex justify-center fixed bottom-0 left-0 w-full">
-      <div class="flex pt-2 bg-pink-500 p-2 rounded">
-        <div class="pt-2">Reciever:</div>
+      <div class="flex bg-pink-500 p-2">
         <input
           type="text"
           id="receiver"
@@ -31,16 +28,20 @@
           value="bob@univ-rennes.fr"
         />
       </div>
+    </div>
+
+    <div id="exchanged-messages"></div>
+    <!--input text and reciever-->
+    <div class="flex justify-center fixed bottom-0 left-0 w-full">
       <input
-        class="p-2 text-white rounded w-3/4 bg-blue-600 focus:bg-blue-500 m-2"
+        class="p-2 text-white rounded w-11/12 bg-blue-600 focus:bg-blue-500 my-2"
         type="text"
         id="message"
-        size="50"
         placeholder="Ceci est mon premier message"
         value="Ceci est mon premier message"
       />
       <button
-        class="bg-green-600 hover:bg-green-500 m-2 p-2 rounded-md"
+        class="bg-green-600 hover:bg-green-500 my-2 ml-1 p-2 rounded-md"
         id="send-button"
         type="button"
         *
