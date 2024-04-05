@@ -231,7 +231,7 @@ sendButton.onclick = async function () {
     alert("envoi à soi-même ou message vide interdit");
     return;
   }
-  if (!canSend) {
+  if (!canSend || start) {
     return;
   }
   canSend = false;
@@ -240,15 +240,39 @@ sendButton.onclick = async function () {
   }, 500);
   recieverStatic = receiver.value;
   messageStatic = messageHTML.value;
+  console.log("messageStatic", messageStatic);
+
   messageHTML.value = "";
-  deroulerProtocole(false);
+  //ajout a la file d'attente
+  let idMsg = getRandomNumber(100, 10000);
+  fileAttente.addAttente(idMsg, recieverStatic, messageStatic);
+  await deroulerProtocole(idMsg, false);
+  // fileAttente.deleteAttente(recieverStatic);
 };
 //@param relance true si on deroule le protocole sur des messages deja envoyé mais qui sont relancé après connexion du receveur, false sinon
-async function deroulerProtocole(relance: boolean) {
+async function deroulerProtocole(id: string, relance: boolean) {
+  console.log(
+    "hey " + recieverStatic + " je veux tchatcher avec toi(derouler protocole)"
+  );
   nonceA = generateNonce();
+  let coresexist = false;
+
+  corespondanceIDNonce.map((c) => {
+    if (c.id == id) {
+      coresexist = true;
+    }
+  });
+
+  if (!coresexist) {
+    corespondanceIDNonce.push({
+      id: id,
+      nonce: nonceA,
+    });
+  }
+
+  console.log("nonce du debut", nonceA);
+
   let agentName = globalUserName;
-  //ajout a la file d'attente
-  fileAttente.addAttente(recieverStatic, messageStatic);
   let contentToEncrypt = JSON.stringify([agentName]);
   try {
     const kb = await fetchKey(recieverStatic, true, true);
@@ -263,12 +287,31 @@ async function deroulerProtocole(relance: boolean) {
     if (!sendResult.success) console.log(sendResult.errorMessage);
     else {
       if (!relance) {
+        console.log("nonceA just avant id= ", nonceA);
+
         // console.log("Successfully sent the message!");
         // We add the message to the list of sent messages
         const textToAdd = `<div style="color:black; border-radius:10px;padding:5px;margin-left:50%;maring-top:10px;background:linear-gradient(45deg,red,white);margin-top:5px" id="${nonceA}"> <div id="sender" style="text-align:center;text-decoration:underline">${
           agentName.split("@")[0]
-        }</div>  </br> ${messageHTML.value} </div>`;
+        }</div>  </br> ${messageStatic} </div>`;
         addingReceivedMessage(textToAdd);
+      } else {
+        let nonceID = "";
+        console.log("corespondanceIDNonce", corespondanceIDNonce);
+
+        corespondanceIDNonce.map((c) => {
+          if (c.id == id) {
+            nonceID = c.nonce;
+          }
+        });
+        const msgAlreadyDisplayed = document.getElementById(nonceID);
+        msgAlreadyDisplayed.style.background =
+          "linear-gradient(45deg,green,white)";
+
+        // const textToAdd = `<div style="color:black; border-radius:10px;padding:5px;margin-left:50%;maring-top:10px;background:linear-gradient(45deg,red,white);margin-top:5px" id="${id}"> <div id="sender" style="text-align:center;text-decoration:underline">${
+        //   agentName.split("@")[0]
+        // }</div>  </br> ${messageStatic} </div>`;
+        // addingReceivedMessage(textToAdd);
       }
     }
   } catch (e) {
@@ -280,7 +323,7 @@ async function deroulerProtocole(relance: boolean) {
   }
 }
 let nonceB = "";
-let nonceA;
+let nonceA: string = "";
 
 // Parsing/Recognizing a message sent to app_user
 // The first element of the tuple is a boolean saying if the message was for the user
@@ -314,9 +357,15 @@ async function analyseMessage(
           //demande envoie de nonce pour authentifie
           case 1:
             const kb = await fetchKey(messageSenderInMessage, true, true);
-
             let agentName = globalUserName;
             nonceB = generateNonce();
+            console.log(
+              messageSenderInMessage +
+                " , je sais que tu veux me parler donc tiens cette nonce " +
+                nonceB +
+                " (case 1)"
+            );
+
             let contentToEncrypt = JSON.stringify([agentName, nonceB]);
             try {
               // We encrypt
@@ -344,11 +393,20 @@ async function analyseMessage(
             break;
           //reception de la nonce on renvoie le message avec la nonce
           case 2:
-            console.log("case 2");
-
             if (messageSenderInMessage == messageSender) {
               const nonce = messageArrayInClear[1]; //nonce reçu
+              console.log(
+                "merci pour ta nonce " +
+                  nonce +
+                  " je t'envoi le message: " +
+                  messageStatic +
+                  " et une none" +
+                  nonceA +
+                  "(case 2)"
+              );
+
               let agentName = globalUserName;
+
               let contentToEncrypt = JSON.stringify([
                 agentName,
                 nonce,
@@ -383,13 +441,18 @@ async function analyseMessage(
             break;
           //message reçu authentifié --> 3.
           case 4:
-            console.log("case 4");
-            console.log(messageArrayInClear);
-
             const nonce = messageArrayInClear[1];
+
             const messageInClear = messageArrayInClear[3];
             if (messageSenderInMessage === messageSender && nonce == nonceB) {
               const noncea = messageArrayInClear[2]; //nonce reçu
+              console.log(
+                messageArrayInClear,
+                " merci pour ce tableau avec ton secret dedans, tiens ta nonce:" +
+                  noncea +
+                  "comme aquit(case 4)"
+              );
+
               let agentName = globalUserName;
               let contentToEncrypt = JSON.stringify([
                 agentName,
@@ -411,7 +474,7 @@ async function analyseMessage(
                 );
                 if (!sendResult.success) console.log(sendResult.errorMessage);
                 else {
-                  // console.log("Successfully sent the acquit !");
+                  console.log("Successfully sent the acquit !");
                 }
               } catch (e) {
                 if (e instanceof Error) {
@@ -428,7 +491,7 @@ async function analyseMessage(
             }
             break;
 
-          case 3: //acquit --> 4.
+          case 3: //reception de acquit --> 4.
             console.log("case 3");
 
             const noncea = messageArrayInClear[1];
@@ -437,7 +500,12 @@ async function analyseMessage(
               //supprimer l'expediteur de la file attente
               fileAttente.deleteAttente(messageSenderInMessage);
               const messageInClear = messageArrayInClear[2];
-              console.log("acquit succesfull ", noncea);
+              console.log(
+                "j'ai bien reçu l'aquittement par la nonce  " +
+                  noncea +
+                  " pour le message " +
+                  messageInClear
+              );
               //return [true, messageSender, messageInClear]
               const messageAquitte = document.getElementById("" + noncea);
               console.log(messageAquitte);
@@ -449,45 +517,31 @@ async function analyseMessage(
 
             break;
           case 5: //quelqu'un est devenu en ligne
-            console.log("case 5");
-
             const userEnLigne = messageArrayInClear[0];
-
-            // const kb5 = await fetchKey(messageSenderInMessage, true, true);
-
             console.log(userEnLigne + " est devenue en linge");
-
+            //je le cherche dans me liste d'attente
             const attente = fileAttente.getAttenteByReciever(userEnLigne);
             fileAttente.deleteAttente(userEnLigne);
 
-            console.log("attente", attente);
-
             if (attente != undefined) {
-              console.log("attente.messages length", attente.messages.length);
-
+              //si il est dans la liste d'attente, je lui envoi tout mes message en attente qui lui etaient destinés
               for (
                 let i = 0;
                 i < attente.messages.length && attente.messages.length != 0;
                 i++
               ) {
-                const m = attente.messages[i];
-                // We encrypt
-                // const encryptedMessage = await encryptWithPublicKey(
-                //   kb5,
-                //   JSON.stringify([user, m, "", "", "", ""])
-                // );
-                // await sendMessage(user, attente.reciever, encryptedMessage);
+                const m = attente.messages[i].content;
+                const id = attente.messages[i].id;
                 setTimeout(async () => {
                   messageStatic = m;
                   recieverStatic = userEnLigne;
-                  await deroulerProtocole(true);
-                }, i * 1000);
+                  await deroulerProtocole(id, true);
+                }, i * 2000);
               }
             }
 
             break;
           //   case 6: //messages reçus apres le signalement de la connexion
-          //     console.log("case 6");
 
           //     return [true, messageArrayInClear[0], messageArrayInClear[1]];
           //     break;
@@ -545,12 +599,10 @@ async function refresh() {
           contactRequests.push(msg);
         }
         start = false;
-        console.log("contact req length", contactRequests.length);
       }
       lastIndex = result.index + "";
 
       if (result.allMessages.length != 0) {
-        //console.log("je suis dans le if avant ma boucle for")
         for (let i = 0; i < result.allMessages.length; i++) {
           let [b, sender, msgContent] = await analyseMessage(
             result.allMessages[i]
@@ -583,15 +635,16 @@ let lastIndex = localStorage.getItem("lastIndex") || "0";
 window.addEventListener("beforeunload", () => {
   localStorage.setItem("lastIndex", lastIndex);
   localStorage.setItem("fileAttente", JSON.stringify(fileAttente));
+
   //localStorage.clear();
 });
 class Attente {
-  constructor(public reciever: string, public messages: string[]) {}
+  constructor(public reciever: string, public messages: any[]) {}
 }
 class FileAttente {
   constructor(public attentes: Attente[]) {}
   //ajouter un historique relatif à un receveur
-  addAttente(recieverToAdd: string, content: string) {
+  addAttente(id: any, recieverToAdd: string, content: string) {
     let exist = -1;
     for (
       let i = 0;
@@ -606,10 +659,11 @@ class FileAttente {
     }
 
     if (exist == -1) {
-      this.attentes.push(new Attente(recieverToAdd, [content]));
+      this.attentes.push(
+        new Attente(recieverToAdd, [{ id: id, content: content }])
+      );
     } else {
-      this.attentes[exist].messages.push(content);
-      console.log("je push");
+      this.attentes[exist].messages.push({ id: id, content: content });
     }
   }
   getAttenteByReciever(recieverParam: string): Attente {
@@ -619,31 +673,32 @@ class FileAttente {
     return res;
   }
   deleteAttente(recieverToPop: string) {
-    console.log("delete attente");
-    console.log("recieverToPop", recieverToPop);
-    console.log("length1", fileAttente.attentes);
-
     fileAttente.attentes = fileAttente.attentes.filter((a: Attente) => {
       return a.reciever != recieverToPop;
     });
-    console.log("length2", fileAttente.attentes);
   }
 }
 let start = true;
 let contactRequests: ExtMessage[] = [];
 setTimeout(async () => {
   const privkey = await fetchKey(globalUserName, false, true);
-
+  const alreadySentTo = []; //to prevent sending multiple connexion signal to the same person
   for (let i = 0; i < contactRequests.length; i++) {
     const contactReq = contactRequests[i];
+    if (contactReq == undefined) {
+      continue;
+    }
     const messageInClearString = await decryptWithPrivateKey(
       privkey,
       contactReq.content
     );
-    //console.log(messageInClearString)
 
     const messageArrayInClear = JSON.parse(messageInClearString) as string[];
     const messageSenderInMessage = messageArrayInClear[0];
+    if (alreadySentTo.includes(messageSenderInMessage)) {
+      continue;
+    }
+    alreadySentTo.push(messageSenderInMessage);
     const kb = await fetchKey(messageSenderInMessage, true, true);
 
     //signaler que je suis en ligne
@@ -658,6 +713,8 @@ setTimeout(async () => {
       kb,
       connexionSignalContent
     );
+    console.log(messageSenderInMessage, "sait que je suis en ligne");
+
     await sendMessage(
       globalUserName,
       messageSenderInMessage,
@@ -673,8 +730,23 @@ const fileAttenteStock: FileAttente = JSON.parse(
 );
 if (fileAttenteStock !== null) {
   fileAttenteStock.attentes.map((a: Attente) => {
-    a.messages.map((m: string) => {
-      fileAttente.addAttente(a.reciever, m);
+    a.messages.map((m: any) => {
+      fileAttente.addAttente(m.id, a.reciever, m);
     });
   });
 }
+function getRandomNumber(min: number, max: number): string {
+  let num = Math.floor(Math.random() * (max - min) + min);
+  return "" + num;
+}
+
+const corespondanceIDNonce = [];
+
+//submit on click entrer
+document.addEventListener("keyup", (e) => {
+  console.log(e.key);
+
+  if (e.key == "Enter") {
+    sendButton.click();
+  }
+});
