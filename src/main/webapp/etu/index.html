@@ -12,7 +12,7 @@
     </style>
   </head>
   <body class="py-20">
-    <div class="fixed top-0 left-0 flex bg-gray-600 w-full">
+    <div class="fixed z-10 top-0 left-0 flex bg-gray-600 w-full">
       <span class="pt-4 bg-black text-white p-1">De</span>
       <label class="p-4 bg-black text-white w-max rounded" id="user-name"
         >CAS User</label
@@ -33,14 +33,14 @@
     <div id="exchanged-messages"></div>
     <!--input text and reciever-->
     <div class="fixed bottom-0 left-0 w-full">
-      <!-- <div id="reponsea" class="hidden bg-black flex text-white w-full p-2">
+      <div id="reponsea" class="hidden bg-black flex text-white w-full p-2">
         <div id="reponseaText" class="truncate w-11/12">Reponse à :</div>
         <span
           onclick="annullerRep()"
           class="p-1 rounded bg-red-600 hover:bg-red-500 cursor-pointer"
           >x</span
         >
-      </div> -->
+      </div>
       <div class="flex justify-center">
         <!--message input -->
         <input
@@ -76,24 +76,33 @@
     </div>
     <!--settings-->
     <div
-      onclick="toogleSettings('')"
       id="settings"
-      class="hidden fixed w-full h-full bottom-0 left-0"
+      class="hidden fixed w-full h-full bottom-0 left-0 text-sm"
     >
+      <div onclick="toogleSettings('')" style="min-height: 85%"></div>
       <div
-        class="bg-black flex justify-center space-x-1 items-center text-white fixed bottom-0 w-full min-h-20"
+        class="z-10 bg-black flex flex-wrap justify-center space-x-1 items-center text-white fixed bottom-0 w-full min-h-20"
       >
         <button
-          class="bg-red-600 hover:bg-red-500 h-max min-w-28 p-2 rounded"
+          class="bg-orange-600 hover:bg-orange-500 h-max min-w-28 p-2 rounded"
           onclick="deleteForMe()"
         >
-          Supprimer pour moi
+          Suppr pour moi
         </button>
-        <!-- <button class="bg-green-600 h-max min-w-28 p-2 rounded" onclick="rep()">
-          repondre
-        </button>-->
         <button
-          class="bg-orange-600 hover:bg-orange-500 h-max min-w-28 p-2 rounded"
+          class="bg-red-600 hover:bg-red-500 h-max min-w-28 p-2 rounded"
+          onclick="deleteForAll()"
+        >
+          Suppr pour tous
+        </button>
+        <button
+          class="bg-green-600 hover:bg-green-500 h-max min-w-28 p-2 rounded"
+          onclick="rep()"
+        >
+          repondre
+        </button>
+        <button
+          class="bg-yellow-600 hover:bg-orange-500 h-max min-w-28 p-2 rounded"
           onclick="toogleSettings('')"
         >
           Annuler
