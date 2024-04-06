@@ -12,18 +12,21 @@
     </style>
   </head>
   <body class="py-20">
-    <div class="fixed z-10 top-0 left-0 flex bg-gray-600 w-full">
-      <span class="pt-4 bg-black text-white p-1">De</span>
-      <label class="p-4 bg-black text-white w-max rounded" id="user-name"
+    <div class="fixed text-white z-10 top-0 left-0 flex bg-gray-600 w-full">
+      <span class="pt-4 bg-black text-white py-1">De</span>
+      <label
+        class="py-4 px-1 underline bg-black text-white w-max rounded"
+        id="user-name"
         >CAS User</label
       >
-      <div class="bg-pink-500 p-2 pt-4">vers</div>
+      <div class="py-2 bg-black pt-4">vers</div>
 
-      <div class="flex bg-pink-500 p-2">
+      <div class="flex bg-black p-2">
         <input
+          oninput="recieverChange()"
           type="text"
           id="receiver"
-          class="p-1 mx-2 rounded h-10"
+          class="p-1 mx-2 rounded text-black h-10"
           placeholder="bob@univ-rennes.fr"
           value="bob@univ-rennes.fr"
         />
@@ -36,12 +39,20 @@
       <div id="reponsea" class="hidden bg-black flex text-white w-full p-2">
         <div id="reponseaText" class="truncate w-11/12">Reponse à :</div>
         <span
-          onclick="annullerRep()"
+          onclick="annulerRep()"
           class="p-1 rounded bg-red-600 hover:bg-red-500 cursor-pointer"
           >x</span
         >
       </div>
       <div class="flex justify-center">
+        <!--vider conv-->
+        <button
+          onclick="viderConv()"
+          class="bg-red-600 hover:bg-red-500 text-white my-2 rounded m-1 p-1 text-sm"
+        >
+          Vider conv
+        </button>
+
         <!--message input -->
         <input
           class="p-2 text-white rounded w-11/12 bg-blue-600 focus:bg-blue-500 my-2"
