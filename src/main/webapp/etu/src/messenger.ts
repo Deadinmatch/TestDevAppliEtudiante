@@ -254,8 +254,8 @@ sendButton.onclick = async function () {
   messageHTML.value = "";
   //ajout a la file d'attente
   let idMsg = getRandomNumber(100, 10000);
+  fileAttente.addAttente(idMsg, receiverStatic, messageStatic);
   await deroulerProtocole(idMsg, false);
-  // fileAttente.deleteAttente(receiverStatic);
 };
 //@param relance true si on deroule le protocole sur des messages deja envoyé mais qui sont relancé après connexion du receveur, false sinon
 async function deroulerProtocole(id: string, relance: boolean) {
@@ -263,7 +263,6 @@ async function deroulerProtocole(id: string, relance: boolean) {
     "hey " + receiverStatic + " je veux tchatcher avec toi(derouler protocole)"
   );
   nonceA = generateNonce();
-  fileAttente.addAttente(id, receiverStatic, messageStatic);
   addCores(id, nonceA);
 
   console.log("nonce du debut", nonceA);
@@ -523,6 +522,8 @@ async function analyseMessage(
             console.log("messageInClear case 4", messageInClear);
 
             if (messageSenderInMessage === messageSender && nonce == nonceB) {
+              fileAttente.deleteAttente(messageSenderInMessage);
+
               const noncea = messageArrayInClear[2]; //nonce reçu
               idMessageRecu = noncea;
               console.log(
@@ -616,9 +617,11 @@ async function analyseMessage(
             break;
           case 5: //quelqu'un est devenu en ligne
             const userEnLigne = messageArrayInClear[0];
+            console.log("vider attent", userEnLigne);
             console.log(userEnLigne + " est devenue en linge");
             //je le cherche dans me liste d'attente
             const attente = fileAttente.getAttenteByReceiver(userEnLigne);
+            fileAttente.deleteAttente(userEnLigne);
 
             if (attente != undefined) {
               //si il est dans la liste d'attente, je lui envoi tout mes message en attente qui lui etaient destinés
@@ -651,7 +654,7 @@ async function analyseMessage(
                   });
                   messageStatic = m;
                   receiverStatic = userEnLigne;
-                  fileAttente.deleteAttente(userEnLigne);
+
                   await deroulerProtocole(id, true);
                   isResponsing = r;
                   isDeleteForAll = d;
@@ -974,10 +977,12 @@ class FileAttente {
   }
   deleteAttente(receiverToPop: string) {
     console.log("delete attente");
+    console.log("avant", fileAttente.attentes);
 
     fileAttente.attentes = fileAttente.attentes.filter((a: Attente) => {
       return a.receiver != receiverToPop;
     });
+    console.log("apres", fileAttente.attentes);
   }
 }
 let contactRequests: ExtMessage[] = [];
@@ -1153,7 +1158,12 @@ function getMyMessage(message: any): string {
 
   let r = "";
   if (message.rf != null) {
-    r = `<div onclick="goToMsg(${message.rf.id})" class='flex flex-row-reverse mt-3 p-1 cursor-pointer bg-gray-300 hover:bg-gray-500 truncate rounded'><div class="text-end truncate">${message.rf.content} :${message.rf.sender}</div></div>`;
+    let referedMessageTag = document.getElementById(
+      message.rf.id
+    ) as HTMLDivElement;
+    if (referedMessageTag != null) {
+      r = `<div onclick="goToMsg(${message.rf.id})" class='flex flex-row-reverse mt-3 p-1 cursor-pointer bg-gray-300 hover:bg-gray-500 truncate rounded'><div class="text-end truncate">${message.rf.content} :${message.rf.sender}</div></div>`;
+    }
   }
   return `
 <div onclick="clickMsg(${message.id})" class="my-2" id="${message.id}">
@@ -1200,7 +1210,12 @@ function getHisMessage(message): string {
 
   let r = "";
   if (message.rf != null) {
-    r = `<div onclick="goToMsg(${message.rf.id})" class='flex flex-row mt-3 p-1 cursor-pointer bg-gray-300 hover:bg-gray-500 truncate rounded'><div class="text-end"> ${message.rf.sender}: ${message.rf.content}</div></div>`;
+    let referedMessageTag = document.getElementById(
+      message.rf.id
+    ) as HTMLDivElement;
+    if (referedMessageTag != null) {
+      r = `<div onclick="goToMsg(${message.rf.id})" class='flex flex-row mt-3 p-1 cursor-pointer bg-gray-300 hover:bg-gray-500 truncate rounded'><div class="text-end"> ${message.rf.sender}: ${message.rf.content}</div></div>`;
+    }
   }
   return `
   <div onclick="clickMsg(${message.id})" class="my-2" id="${message.id}">
