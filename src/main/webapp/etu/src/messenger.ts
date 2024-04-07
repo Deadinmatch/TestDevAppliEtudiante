@@ -254,7 +254,6 @@ sendButton.onclick = async function () {
   messageHTML.value = "";
   //ajout a la file d'attente
   let idMsg = getRandomNumber(100, 10000);
-  fileAttente.addAttente(idMsg, receiverStatic, messageStatic);
   await deroulerProtocole(idMsg, false);
   // fileAttente.deleteAttente(receiverStatic);
 };
@@ -264,9 +263,11 @@ async function deroulerProtocole(id: string, relance: boolean) {
     "hey " + receiverStatic + " je veux tchatcher avec toi(derouler protocole)"
   );
   nonceA = generateNonce();
+  fileAttente.addAttente(id, receiverStatic, messageStatic);
   addCores(id, nonceA);
 
   console.log("nonce du debut", nonceA);
+  console.log("id", id);
 
   let agentName = globalUserName;
   let contentToEncrypt = JSON.stringify([agentName]);
@@ -318,6 +319,7 @@ async function deroulerProtocole(id: string, relance: boolean) {
           sender: agentName,
           content: messageStatic,
           ak: false,
+          date: getDateFormat(),
         });
 
         addingReceivedMessage(textToAdd);
@@ -330,6 +332,7 @@ async function deroulerProtocole(id: string, relance: boolean) {
           sender: globalUserName,
           receiver: receiverStatic,
           ak: false,
+          date: getDateFormat(),
         });
       } else {
         //si c'est de la relace on considère que c'est bien recu
@@ -571,19 +574,18 @@ async function analyseMessage(
             console.log("case 3");
             const noncea = messageArrayInClear[1];
 
-            //marquer le message dans messageshistory comme aquité
-            messagesHistory = messagesHistory.map((m) => {
-              console.log("noncea", noncea);
-              console.log("m.id", m.id);
-              console.log("getCoresNonceById(m.id)", getCoresNonceById(m.id));
+            // //marquer le message dans messageshistory comme aquité
+            // messagesHistory = messagesHistory.map((m) => {
+            //   console.log("noncea", noncea);
+            //   console.log("m.id", m.id);
+            //   console.log("m.nonceDebut", m.nonceDebut);
 
-              if (getCoresNonceById(m.id) == noncea) {
-                m.ak = true;
-              }
-              return m;
-            });
+            //   if (m.nonceDebut == noncea) {
+            //     m.ak = true;
+            //   }
+            //   return m;
+            // });
             //supprimer l'expediteur de la file attente
-            fileAttente.deleteAttente(messageSenderInMessage);
 
             if (messageSenderInMessage == messageSender && noncea == nonceA) {
               const messageInClear = messageArrayInClear[2];
@@ -640,9 +642,16 @@ async function analyseMessage(
                     isDeleteForAll = true;
                   }
                   const id = attente.messages[i].id;
+                  const nonceDebut = attente.messages[i].nonceDebut;
+                  messagesHistory = messagesHistory.map((m) => {
+                    if (m.id == nonceDebut) {
+                      m.ak = true;
+                    }
+                    return m;
+                  });
                   messageStatic = m;
                   receiverStatic = userEnLigne;
-                  addCores(id, nonceA);
+                  fileAttente.deleteAttente(userEnLigne);
                   await deroulerProtocole(id, true);
                   isResponsing = r;
                   isDeleteForAll = d;
@@ -713,8 +722,6 @@ async function analyseMessage(
               );
             }
             break;
-
-            break;
         }
       } catch (e) {
         console.log("analyseMessage: decryption failed because of " + e);
@@ -770,6 +777,7 @@ function actionOnMessageOne(fromA: string, messageContent: string) {
     rf: rf,
     sender: fromA,
     content: messageContent,
+    date: getDateFormat(),
   });
 
   addingReceivedMessage(textToAdd);
@@ -781,6 +789,7 @@ function actionOnMessageOne(fromA: string, messageContent: string) {
     refered: selectedMessageIdLocal,
     receiver: receiverStatic,
     ak: false,
+    date: getDateFormat(),
   });
 }
 
@@ -945,6 +954,7 @@ class FileAttente {
           {
             id: id,
             content: content,
+            nonceDebut: nonceA,
           },
         ])
       );
@@ -952,6 +962,7 @@ class FileAttente {
       this.attentes[exist].messages.push({
         id: id,
         content: content,
+        nonceDebut: nonceA,
       });
     }
   }
@@ -1145,7 +1156,7 @@ function getMyMessage(message: any): string {
     r = `<div onclick="goToMsg(${message.rf.id})" class='flex flex-row-reverse mt-3 p-1 cursor-pointer bg-gray-300 hover:bg-gray-500 truncate rounded'><div class="text-end truncate">${message.rf.content} :${message.rf.sender}</div></div>`;
   }
   return `
-<div id="${message.id}">
+<div onclick="clickMsg(${message.id})" class="my-2" id="${message.id}">
  ${r}
  <div class="relative text-black rounded-md p-2 ml-1/2 mt-1" style="margin-left:50%;background:linear-gradient(350deg,green,white)"> <div class="flex justify-end"  >
 <!--status-->
@@ -1174,19 +1185,29 @@ class="w-6 h-6 absolute top-1 left-1 cursor-pointer">
 </div>  
 <!--content-->
 <div  class="pr-2 messageContent">${message.content}</div>
+
  </div>
+ <div id="${message.id + "date"}" class="text-center hidden text-sm" >${
+    message.date
+  }</div>
  </div>`;
 }
 function getHisMessage(message): string {
+  if (message.date == undefined) {
+    message.date = getDateFormat();
+  }
+  console.log(" message.date", message.date);
+
   let r = "";
   if (message.rf != null) {
     r = `<div onclick="goToMsg(${message.rf.id})" class='flex flex-row mt-3 p-1 cursor-pointer bg-gray-300 hover:bg-gray-500 truncate rounded'><div class="text-end"> ${message.rf.sender}: ${message.rf.content}</div></div>`;
   }
   return `
-  <div id="${message.id}">
+  <div onclick="clickMsg(${message.id})" class="my-2" id="${message.id}">
     ${r}
     
-    <div  style="background:linear-gradient(10deg,yellow,white);padding:10px;border-radius:20px;margin-top:10px;margin-right:50%"><div id="receiver" class="flex flex-start relative">
+    <div class="relative" style="background:linear-gradient(10deg,yellow,white);padding:10px;border-radius:20px;margin-top:10px;margin-right:50%">
+    <div id="receiver" class="flex flex-start relative">
     <img 
     class="rounded-full w-10 h-10"
     alt="photo"
@@ -1206,7 +1227,12 @@ function getHisMessage(message): string {
   
    </div>
    <div class="messageContent">${message.content}</div>
+
    </div> 
+   <div id="${message.id + "date"}" class="text-center hidden text-sm" >${
+    message.date
+  }</div>
+
    </div>`;
 }
 function receiverChange() {
@@ -1236,6 +1262,7 @@ function displayOldMessages() {
           sender: m.sender,
           content: m.content,
           ak: m.ak,
+          date: m.date,
         };
         addingReceivedMessage(getMyMessage(message));
       } else {
@@ -1245,6 +1272,7 @@ function displayOldMessages() {
           sender: m.sender,
           content: m.content,
           ak: m.ak,
+          date: m.date,
         };
         addingReceivedMessage(getHisMessage(message));
       }
@@ -1255,4 +1283,22 @@ function displayOldMessages() {
 function viderConv() {
   received_messages.innerHTML = "";
   messagesHistory = [];
+}
+function getDateFormat() {
+  let date = new Date();
+  // Get year, month, day, hours, and minutes
+  var year = date.getFullYear();
+  var month = ("0" + (date.getMonth() + 1)).slice(-2); // Months are zero based, so add 1
+  var day = ("0" + date.getDate()).slice(-2);
+  var hours = ("0" + date.getHours()).slice(-2);
+  var minutes = ("0" + date.getMinutes()).slice(-2);
+
+  // Format the date and time
+  var formattedDate =
+    year + "/" + month + "/" + day + " " + hours + ":" + minutes;
+  return formattedDate;
+}
+function clickMsg(id) {
+  let tag = document.getElementById(id + "date");
+  tag.classList.toggle("hidden");
 }
