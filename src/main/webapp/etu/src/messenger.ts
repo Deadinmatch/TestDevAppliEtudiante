@@ -110,7 +110,7 @@ async function setCasName() {
   globalUserName = await fetchCasName();
   // We replace the name of the user of the application as the default name
   // In the window
-  userButtonLabel.textContent = globalUserName;
+  userButtonLabel.textContent = globalUserName.split("@")[0];
   if (globalUserName == "bob@univ-rennes.fr") {
     const input = document.getElementById("receiver") as HTMLInputElement;
     input.value = "alice@univ-rennes.fr";
@@ -1317,3 +1317,25 @@ function clickMsg(id) {
   let tag = document.getElementById(id + "date");
   tag.classList.toggle("hidden");
 }
+let lightMode = true;
+const switchTheme = () => {
+  let theme = document.getElementById("theme");
+  let dark = document.getElementById("dark");
+  let light = document.getElementById("light");
+  if (lightMode) {
+    document.body.style.backgroundColor = "black";
+    dark.classList.remove("text-black");
+    dark.classList.add("text-white");
+    light.classList.remove("text-white");
+    light.classList.add("text-black");
+    theme.style.background = "linear-gradient(90deg,white,black)";
+  } else {
+    document.body.style.backgroundColor = "white";
+    dark.classList.remove("text-white");
+    dark.classList.add("text-black");
+    light.classList.remove("text-black");
+    light.classList.add("text-white");
+    theme.style.background = "linear-gradient(90deg,black,white)";
+  }
+  lightMode = !lightMode;
+};
