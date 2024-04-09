@@ -275,21 +275,32 @@ sendButton.onclick = async function () {
       await deroulerProtocole(idMsg, false);
       i += 80;
     }, 1500);
-    annulerRep();
 
     return;
   }
+  //hide the refered message section if exists
+  reponsea.classList.add("hidden");
 
   receiverStatic = receiver.value;
   messageStatic = messageHTML.value;
-
   messageHTML.value = "";
+
+  console.log("isResponsing", isResponsing);
+
+  //response and delete request cases
+  if (isResponsing) {
+    //if the message i wante to send is refering another
+    messageStatic = selectedMessageId + "r&r" + messageStatic;
+    isResponsing = false;
+  } else if (isDeleteForAll) {
+    messageStatic = selectedMessageId + "d&d";
+    isDeleteForAll = false;
+  }
   //ajout a la file d'attente
   let idMsg = getRandomNumber(100, 10000);
   nonceA = generateNonce();
   fileAttente.addAttente(idMsg, receiverStatic, messageStatic);
   await deroulerProtocole(idMsg, false);
-  annulerRep();
 };
 //@param relance true si on deroule le protocole sur des messages deja envoyé mais qui sont relancé après connexion du receveur, false sinon
 async function deroulerProtocole(id: string, relance: boolean) {
@@ -315,15 +326,12 @@ async function deroulerProtocole(id: string, relance: boolean) {
     }
     if (!sendResult.success) console.log(sendResult.errorMessage);
     else {
+      let contentWithoutCode = messageStatic;
       if (!relance) {
         let rf = null;
         if (messageStatic.includes("r&r")) {
-          isResponsing = true;
-          messageStatic = messageStatic.split("r&r")[1];
-        }
-        if (isResponsing) {
+          contentWithoutCode = messageStatic.split("r&r")[1];
           let referedMessageTag = document.getElementById(selectedMessageId);
-
           let referedMessageTextTag = referedMessageTag.getElementsByClassName(
             "messageContent"
           )[0] as HTMLDivElement;
@@ -345,7 +353,7 @@ async function deroulerProtocole(id: string, relance: boolean) {
           id: nonceA,
           rf: rf,
           sender: agentName,
-          content: messageStatic,
+          content: contentWithoutCode,
           ak: false,
           date: getDateFormat(),
         });
@@ -356,7 +364,7 @@ async function deroulerProtocole(id: string, relance: boolean) {
         messagesHistory.push({
           refered: selectedMessageId,
           id: nonceA,
-          content: messageStatic,
+          content: contentWithoutCode,
           sender: globalUserName,
           receiver: receiverStatic,
           ak: false,
@@ -484,16 +492,8 @@ async function analyseMessage(
 
               let agentName = globalUserName;
               let contentToEncrypt: string;
-              let selectedMessageIdLocal = selectedMessageId;
+              console.log("message envoyé messageStatic", messageStatic);
 
-              if (isResponsing) {
-                //if the message i wante to send is refering another
-                messageStatic = selectedMessageId + "r&r" + messageStatic;
-                isResponsing = false;
-              } else if (isDeleteForAll) {
-                messageStatic = selectedMessageIdLocal + "d&d";
-                isDeleteForAll = false;
-              }
               //   if (!isResponsing) {
               //if the message we want to send is not refering a particular other message
               contentToEncrypt = JSON.stringify([
@@ -545,7 +545,7 @@ async function analyseMessage(
             }
             break;
           //message reçu authentifié --> 3.
-          case 4:
+          case 4: //receiver
             const nonce = messageArrayInClear[1];
 
             const messageInClear = messageArrayInClear[3];
@@ -562,6 +562,7 @@ async function analyseMessage(
               );
 
               let agentName = globalUserName;
+
               let contentToEncrypt = JSON.stringify([
                 agentName,
                 noncea,
@@ -945,15 +946,6 @@ class FileAttente {
   constructor(public attentes: Attente[]) {}
   //ajouter un historique relatif à un receveur
   addAttente(id: any, receiverToAdd: string, content: string) {
-    //response and delete request cases
-    if (isResponsing) {
-      //if the message i wante to send is refering another
-      messageStatic = selectedMessageId + "r&r" + messageStatic;
-      isResponsing = false;
-    } else if (isDeleteForAll) {
-      messageStatic = selectedMessageId + "d&d";
-      isDeleteForAll = false;
-    }
     //adding
     let exist = -1;
     for (
@@ -1109,10 +1101,11 @@ function rep() {
   reponsea.classList.remove("hidden");
 }
 
-function annulerRep() {
-  selectedMessageId = "";
-  isResponsing = false;
-  reponsea.classList.add("hidden");
+function setIsResponsing(b: boolean) {
+  if (!b) {
+    reponsea.classList.add("hidden");
+  }
+  isResponsing = b;
 }
 function goToMsg(id: string) {
   let msg = document.getElementById(id);
@@ -1151,7 +1144,6 @@ function getMyMessage(message: any): string {
   }
   //big message case
   let existingMsg = document.getElementById(message.id);
-  console.log("getMyMessage exist ", existingMsg);
 
   if (existingMsg != null) {
     let msgContentTag = existingMsg.getElementsByClassName(
@@ -1224,7 +1216,6 @@ function getHisMessage(message): string {
 
   //big message case
   let existingMsg = document.getElementById(message.id);
-  console.log("getMyMessage exist ", existingMsg);
 
   if (existingMsg != null) {
     let msgContentTag = existingMsg.getElementsByClassName(
