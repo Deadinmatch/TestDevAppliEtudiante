@@ -246,27 +246,57 @@ sendButton.onclick = async function () {
   canSend = false;
   setTimeout(() => {
     canSend = true;
-  }, 500);
-  annulerRep();
+  }, 1000);
+
+  if (messageHTML.value.length > 80) {
+    let grandM = messageHTML.value;
+    receiverStatic = receiver.value;
+    messageHTML.value = "";
+    nonceA = generateNonce();
+
+    let i = 0;
+    const bigMInterv = setInterval(async () => {
+      if (i > grandM.length) {
+        clearInterval(bigMInterv);
+      }
+      let substr: string;
+      if (i + 80 > grandM.length) {
+        substr = grandM.substring(i, grandM.length);
+      } else {
+        substr = grandM.substring(i, i + 80);
+      }
+
+      messageStatic = substr;
+      console.log("paginaaaaaaaaation", messageStatic);
+
+      //ajout a la file d'attente
+      let idMsg = getRandomNumber(100, 10000);
+      fileAttente.addAttente(idMsg, receiverStatic, messageStatic);
+      await deroulerProtocole(idMsg, false);
+      i += 80;
+    }, 1500);
+    annulerRep();
+
+    return;
+  }
+
   receiverStatic = receiver.value;
   messageStatic = messageHTML.value;
 
   messageHTML.value = "";
   //ajout a la file d'attente
   let idMsg = getRandomNumber(100, 10000);
+  nonceA = generateNonce();
   fileAttente.addAttente(idMsg, receiverStatic, messageStatic);
   await deroulerProtocole(idMsg, false);
+  annulerRep();
 };
 //@param relance true si on deroule le protocole sur des messages deja envoyé mais qui sont relancé après connexion du receveur, false sinon
 async function deroulerProtocole(id: string, relance: boolean) {
-  console.log(
-    "hey " + receiverStatic + " je veux tchatcher avec toi(derouler protocole)"
-  );
-  nonceA = generateNonce();
+  // console.log(
+  //   "hey " + receiverStatic + " je veux tchatcher avec toi(derouler protocole)"
+  // );
   addCores(id, nonceA);
-
-  console.log("nonce du debut", nonceA);
-  console.log("id", id);
 
   let agentName = globalUserName;
   let contentToEncrypt = JSON.stringify([agentName]);
@@ -287,7 +317,6 @@ async function deroulerProtocole(id: string, relance: boolean) {
     else {
       if (!relance) {
         let rf = null;
-        console.log("isResponsing", isResponsing);
         if (messageStatic.includes("r&r")) {
           isResponsing = true;
           messageStatic = messageStatic.split("r&r")[1];
@@ -332,6 +361,7 @@ async function deroulerProtocole(id: string, relance: boolean) {
           receiver: receiverStatic,
           ak: false,
           date: getDateFormat(),
+          nonceDebut: nonceA,
         });
       } else {
         //si c'est de la relace on considère que c'est bien recu
@@ -366,6 +396,7 @@ async function deroulerProtocole(id: string, relance: boolean) {
     }
   }
 }
+
 let nonceB = "";
 let nonceA: string = "";
 let idMessageRecu = "";
@@ -403,12 +434,12 @@ async function analyseMessage(
             const kb = await fetchKey(messageSenderInMessage, true, true);
             let agentName = globalUserName;
             nonceB = generateNonce();
-            console.log(
-              messageSenderInMessage +
-                " , je sais que tu veux me parler donc tiens cette nonce " +
-                nonceB +
-                " (case 1)"
-            );
+            // console.log(
+            //   messageSenderInMessage +
+            //     " , je sais que tu veux me parler donc tiens cette nonce " +
+            //     nonceB +
+            //     " (case 1)"
+            // );
 
             let contentToEncrypt = JSON.stringify([agentName, nonceB]);
             try {
@@ -437,18 +468,19 @@ async function analyseMessage(
             break;
           //reception de la nonce on renvoie le message avec la nonce
           case 2:
+            fileAttente.deleteAttente(messageSenderInMessage);
             if (messageSenderInMessage == messageSender) {
               const nonce = messageArrayInClear[1]; //nonce reçu
 
-              console.log(
-                "merci pour ta nonce " +
-                  nonce +
-                  " je t'envoi le message: " +
-                  messageStatic +
-                  " et une none" +
-                  nonceA +
-                  "(case 2)"
-              );
+              // console.log(
+              //   "merci pour ta nonce " +
+              //     nonce +
+              //     " je t'envoi le message: " +
+              //     messageStatic +
+              //     " et une none" +
+              //     nonceA +
+              //     "(case 2)"
+              // );
 
               let agentName = globalUserName;
               let contentToEncrypt: string;
@@ -462,8 +494,6 @@ async function analyseMessage(
                 messageStatic = selectedMessageIdLocal + "d&d";
                 isDeleteForAll = false;
               }
-              console.log("messageStatic case 2", messageStatic);
-
               //   if (!isResponsing) {
               //if the message we want to send is not refering a particular other message
               contentToEncrypt = JSON.stringify([
@@ -522,8 +552,6 @@ async function analyseMessage(
             console.log("messageInClear case 4", messageInClear);
 
             if (messageSenderInMessage === messageSender && nonce == nonceB) {
-              fileAttente.deleteAttente(messageSenderInMessage);
-
               const noncea = messageArrayInClear[2]; //nonce reçu
               idMessageRecu = noncea;
               console.log(
@@ -572,34 +600,25 @@ async function analyseMessage(
             break;
 
           case 3: //reception de acquit --> 4.
-            console.log("case 3");
             const noncea = messageArrayInClear[1];
 
-            // //marquer le message dans messageshistory comme aquité
-            // messagesHistory = messagesHistory.map((m) => {
-            //   console.log("noncea", noncea);
-            //   console.log("m.id", m.id);
-            //   console.log("m.nonceDebut", m.nonceDebut);
-
-            //   if (m.nonceDebut == noncea) {
-            //     m.ak = true;
-            //   }
-            //   return m;
-            // });
-            //supprimer l'expediteur de la file attente
-
+            //marquer le message dans messageshistory comme aquité
+            messagesHistory = messagesHistory.map((m) => {
+              if (m.nonceDebut == noncea) {
+                m.ak = true;
+              }
+              return m;
+            });
             if (messageSenderInMessage == messageSender && noncea == nonceA) {
               const messageInClear = messageArrayInClear[2];
-              console.log(
-                "j'ai bien reçu l'aquittement par la nonce  " +
-                  noncea +
-                  " pour le message " +
-                  messageInClear
-              );
+              // console.log(
+              //   "j'ai bien reçu l'aquittement par la nonce  " +
+              //     noncea +
+              //     " pour le message " +
+              //     messageInClear
+              // );
               //return [true, messageSender, messageInClear]
               const messageAquitte = document.getElementById("" + noncea);
-              console.log("case 3 noncea", noncea);
-
               //   messageAquitte.style.background =
               //     "linear-gradient(45deg,green,white)";
               const statusIcon =
@@ -617,8 +636,7 @@ async function analyseMessage(
             break;
           case 5: //quelqu'un est devenu en ligne
             const userEnLigne = messageArrayInClear[0];
-            console.log("vider attent", userEnLigne);
-            console.log(userEnLigne + " est devenue en linge");
+
             //je le cherche dans me liste d'attente
             const attente = fileAttente.getAttenteByReceiver(userEnLigne);
             fileAttente.deleteAttente(userEnLigne);
@@ -646,15 +664,15 @@ async function analyseMessage(
                   }
                   const id = attente.messages[i].id;
                   const nonceDebut = attente.messages[i].nonceDebut;
-                  messagesHistory = messagesHistory.map((m) => {
-                    if (m.id == nonceDebut) {
-                      m.ak = true;
+                  messagesHistory = messagesHistory.map((mh) => {
+                    if (mh.id == nonceDebut) {
+                      mh.ak = true;
                     }
-                    return m;
+                    return mh;
                   });
                   messageStatic = m;
                   receiverStatic = userEnLigne;
-
+                  nonceA = generateNonce();
                   await deroulerProtocole(id, true);
                   isResponsing = r;
                   isDeleteForAll = d;
@@ -793,6 +811,7 @@ function actionOnMessageOne(fromA: string, messageContent: string) {
     receiver: receiverStatic,
     ak: false,
     date: getDateFormat(),
+    nonceDebut: nonceA,
   });
 }
 
@@ -855,7 +874,7 @@ async function refresh() {
 }
 
 // Automatic refresh: the waiting time is given in milliseconds
-const intervalRefresh = setInterval(refresh, 200);
+const intervalRefresh = setInterval(refresh, 150);
 
 //----------------------reception meme hors connexion---------------------
 let lastIndex = localStorage.getItem("lastIndex") || "0";
@@ -926,8 +945,6 @@ class FileAttente {
   constructor(public attentes: Attente[]) {}
   //ajouter un historique relatif à un receveur
   addAttente(id: any, receiverToAdd: string, content: string) {
-    console.log("ajouté za ds attente", content);
-
     //response and delete request cases
     if (isResponsing) {
       //if the message i wante to send is refering another
@@ -976,13 +993,9 @@ class FileAttente {
     return res;
   }
   deleteAttente(receiverToPop: string) {
-    console.log("delete attente");
-    console.log("avant", fileAttente.attentes);
-
     fileAttente.attentes = fileAttente.attentes.filter((a: Attente) => {
       return a.receiver != receiverToPop;
     });
-    console.log("apres", fileAttente.attentes);
   }
 }
 let contactRequests: ExtMessage[] = [];
@@ -1040,7 +1053,6 @@ if (fileAttenteStock !== null) {
       fileAttente.addAttente(m.id, a.receiver, m.content);
     });
   });
-  console.log("fileAttente", fileAttente);
 }
 function getRandomNumber(min: number, max: number): string {
   let num = Math.floor(Math.random() * (max - min) + min);
@@ -1049,8 +1061,6 @@ function getRandomNumber(min: number, max: number): string {
 
 //submit on click entrer
 document.addEventListener("keyup", (e) => {
-  console.log(e.key);
-
   if (e.key == "Enter") {
     sendButton.click();
   }
@@ -1080,7 +1090,8 @@ function deleteForMe() {
 
 async function deleteForAll() {
   isDeleteForAll = true;
-  fileAttente.addAttente("", receiverStatic, selectedMessageId + "d&d");
+  nonceA = generateNonce();
+  fileAttente.addAttente(nonceA, receiverStatic, selectedMessageId + "d&d");
   await deroulerProtocole("", false);
   deleteForMe();
   isDeleteForAll = false;
@@ -1088,7 +1099,6 @@ async function deleteForAll() {
 
 function rep() {
   toogleSettings(selectedMessageId);
-  console.log("rep to ", selectedMessageId);
   const messageToRepTo = document.getElementById(selectedMessageId);
   const messageContent = messageToRepTo.getElementsByClassName(
     "messageContent"
@@ -1100,6 +1110,8 @@ function rep() {
 }
 
 function annulerRep() {
+  selectedMessageId = "";
+  isResponsing = false;
   reponsea.classList.add("hidden");
 }
 function goToMsg(id: string) {
@@ -1132,29 +1144,29 @@ function deleteMessageFromHistory(id) {
     return id != m.id;
   });
 }
-function isAk(nonce) {
-  let id = getCoresIdByNonce(nonce);
-  let res = true;
-  fileAttente.attentes.map((a) => {
-    a.messages.map((m) => {
-      if (m.id == id) {
-        res = true;
-      }
-    });
-  });
-  return res;
-}
+
 function getMyMessage(message: any): string {
-  if (message.content.includes("d&d")) {
+  if (message.content.includes("d&d") || message.content.length == 0) {
     return "";
   }
+  //big message case
+  let existingMsg = document.getElementById(message.id);
+  console.log("getMyMessage exist ", existingMsg);
+
+  if (existingMsg != null) {
+    let msgContentTag = existingMsg.getElementsByClassName(
+      "messageContent"
+    )[0] as HTMLDivElement;
+    msgContentTag.innerText += message.content;
+    return "";
+  }
+
   let statusColorClasses = "";
   if (message.ak) {
     statusColorClasses = "bg-white text-blue-500";
   } else {
     statusColorClasses = "bg-black text-white";
   }
-  console.log("statusColorClasses", statusColorClasses);
 
   let r = "";
   if (message.rf != null) {
@@ -1194,19 +1206,33 @@ class="w-6 h-6 absolute top-1 left-1 cursor-pointer">
   " />
 </div>  
 <!--content-->
-<div  class="pr-2 messageContent">${message.content}</div>
+<div style="overflow:hidden" class="pr-4 messageContent">${
+    message.content
+  }</div>
 
  </div>
- <div id="${message.id + "date"}" class="text-center hidden text-sm" >${
-    message.date
-  }</div>
+ <!--date et heure-->
+ <div id="${
+   message.id + "date"
+ }" class="text-center hidden text-sm text-gray-400" >${message.date}</div>
  </div>`;
 }
 function getHisMessage(message): string {
   if (message.date == undefined) {
     message.date = getDateFormat();
   }
-  console.log(" message.date", message.date);
+
+  //big message case
+  let existingMsg = document.getElementById(message.id);
+  console.log("getMyMessage exist ", existingMsg);
+
+  if (existingMsg != null) {
+    let msgContentTag = existingMsg.getElementsByClassName(
+      "messageContent"
+    )[0] as HTMLDivElement;
+    msgContentTag.innerText += message.content;
+    return "";
+  }
 
   let r = "";
   if (message.rf != null) {
@@ -1241,12 +1267,12 @@ function getHisMessage(message): string {
     }</spane>
   
    </div>
-   <div class="messageContent">${message.content}</div>
+   <div style="overflow:hidden" class="messageContent">${message.content}</div>
 
    </div> 
-   <div id="${message.id + "date"}" class="text-center hidden text-sm" >${
-    message.date
-  }</div>
+   <div id="${
+     message.id + "date"
+   }" class="text-center hidden text-sm text-gray-400" >${message.date}</div>
 
    </div>`;
 }
@@ -1261,9 +1287,6 @@ function displayOldMessages() {
   received_messages.innerHTML = "";
   //display old messages
   messagesHistory.map((m: any) => {
-    console.log("receiverStatic", receiverStatic);
-    console.log("m.receiver", m.receiver);
-
     if (m.receiver == receiverStatic || m.sender == receiverStatic) {
       let rf = null;
       if (m.refered != "") {
@@ -1315,7 +1338,10 @@ function getDateFormat() {
 }
 function clickMsg(id) {
   let tag = document.getElementById(id + "date");
-  tag.classList.toggle("hidden");
+  tag.classList.remove("hidden");
+  setTimeout(() => {
+    tag.classList.add("hidden");
+  }, 3000);
 }
 let lightMode = true;
 const switchTheme = () => {
@@ -1339,3 +1365,26 @@ const switchTheme = () => {
   }
   lightMode = !lightMode;
 };
+const textTheme = (): string => {
+  if (lightMode) {
+    return "text-black";
+  } else {
+    return "text-white";
+  }
+};
+
+const copier = () => {
+  let message = document.getElementById(selectedMessageId);
+  let contentDiv = message.getElementsByClassName(
+    "messageContent"
+  )[0] as HTMLDivElement;
+  navigator.clipboard.writeText(contentDiv.innerText);
+  toogleSettings(selectedMessageId);
+  let copiedMessage = document.getElementById("copiedMessage");
+  copiedMessage.classList.remove("hidden");
+  setTimeout(() => {
+    copiedMessage.classList.add("hidden");
+  }, 3000);
+};
+//scroll to the end of the conv
+window.scrollTo(0, document.body.scrollHeight);
