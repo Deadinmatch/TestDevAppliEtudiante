@@ -14,24 +14,28 @@
     </style>
   </head>
   <body class="py-20">
-    <div class="fixed text-white z-10 top-0 left-0 flex bg-gray-600 w-full">
-      <span class="pt-4 bg-black text-white p-1">De</span>
-      <label
-        class="py-4 px-2 underline bg-black text-white w-max rounded"
-        id="user-name"
-        >User</label
-      >
-      <div class="py-2 bg-black pt-4">vers</div>
+    <div
+      class="fixed text-white z-10 top-0 left-0 flex justify-between bg-gray-600 w-full"
+    >
+      <div class="flex">
+        <span class="pt-4 bg-black text-white p-1">De</span>
+        <label
+          class="py-4 px-2 underline bg-black text-white w-max rounded"
+          id="user-name"
+          >User</label
+        >
+        <div class="py-2 bg-black pt-4">vers</div>
 
-      <div class="flex bg-black p-2">
-        <input
-          oninput="receiverChange()"
-          type="text"
-          id="receiver"
-          class="p-1 mx-2 w-40 text-black h-10"
-          placeholder="bob@univ-rennes.fr"
-          value="bob@univ-rennes.fr"
-        />
+        <div class="flex bg-black p-2">
+          <input
+            oninput="receiverChange()"
+            type="text"
+            id="receiver"
+            class="p-1 mx-2 w-40 text-black h-10"
+            placeholder="bob@univ-rennes.fr"
+            value="bob@univ-rennes.fr"
+          />
+        </div>
       </div>
       <!--theme-->
       <div class="bg-gray-500">
@@ -136,7 +140,7 @@
     >
       <div onclick="toogleSettings('')" style="min-height: 85%"></div>
       <div
-        class="z-10 bg-black flex flex-wrap justify-center space-x-1 items-center text-white fixed bottom-0 w-full min-h-20"
+        class="z-10 bg-gray-400 flex flex-wrap justify-center space-x-1 items-center text-white fixed bottom-0 w-full min-h-20"
       >
         <button
           class="bg-orange-600 hover:bg-orange-500 h-max min-w-28 p-2 rounded"

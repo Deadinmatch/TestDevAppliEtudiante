@@ -115,6 +115,7 @@ async function setCasName() {
     const input = document.getElementById("receiver") as HTMLInputElement;
     input.value = "alice@univ-rennes.fr";
   }
+  await loadHistory();
   displayOldMessages();
 }
 
@@ -359,7 +360,8 @@ async function deroulerProtocole(id: string, relance: boolean) {
         });
 
         addingReceivedMessage(textToAdd);
-
+        //let pbk: any = await fetchKey(globalUserName, true, true);
+        //contentWithoutCode=await encryptWithPublicKey(pbk,contentWithoutCode)
         //save message in history
         messagesHistory.push({
           refered: selectedMessageId,
@@ -758,7 +760,7 @@ async function analyseMessage(
 
 // action for receiving message
 // 1. A -> B: A,{message}Kb
-function actionOnMessageOne(fromA: string, messageContent: string) {
+async function actionOnMessageOne(fromA: string, messageContent: string) {
   if (messageContent.trim() == "") {
     return;
   }
@@ -803,7 +805,8 @@ function actionOnMessageOne(fromA: string, messageContent: string) {
   });
 
   addingReceivedMessage(textToAdd);
-
+  // let pbk: any = await fetchKey(globalUserName, true, true);
+  // messageContent=await encryptWithPublicKey(pbk,messageContent)
   messagesHistory.push({
     id: idMessageRecu,
     content: messageContent,
@@ -1121,13 +1124,17 @@ function goToMsg(id: string) {
   }, 3000);
 }
 
-const messagesHistoryStock = JSON.parse(
-  localStorage.getItem("messagesHistory")
-);
-if (messagesHistoryStock !== null) {
-  messagesHistoryStock.map((mh: any) => {
-    messagesHistory.push(mh);
-  });
+async function loadHistory() {
+  const messagesHistoryStock = JSON.parse(
+    localStorage.getItem("messagesHistory")
+  );
+  if (messagesHistoryStock !== null) {
+    // let pvk: any = await fetchKey(globalUserName, false, true);
+    messagesHistory = messagesHistoryStock.map((mh: any) => {
+      //mh.content = decryptWithPrivateKey(pvk,mh.content);
+      return mh;
+    });
+  }
 }
 function getMessageFromHistoryByID(id) {
   return messagesHistory.find((m) => {
@@ -1314,7 +1321,9 @@ function displayOldMessages() {
 function viderConv() {
   received_messages.innerHTML = "";
   messagesHistory = [];
+  fileAttente.attentes = [];
 }
+
 function getDateFormat() {
   let date = new Date();
   // Get year, month, day, hours, and minutes
@@ -1336,7 +1345,8 @@ function clickMsg(id) {
     tag.classList.add("hidden");
   }, 3000);
 }
-let lightMode = true;
+let lightMode: boolean = true;
+
 let lmstock = localStorage.getItem("lightMode");
 console.log("lmstock", lmstock);
 
@@ -1391,3 +1401,65 @@ const copier = () => {
 };
 //scroll to the end of the conv
 window.scrollTo(0, document.body.scrollHeight);
+
+function encrypt(text: string, key: string): string {
+  let encryptedText = "";
+  let keyIndex = 0;
+  for (let char of text) {
+    if (/[a-zA-Z]/.test(char)) {
+      let keyChar = key.charAt(keyIndex % key.length);
+      let keyShift = keyChar.charCodeAt(0) - 65; // Supposant que la clé est en majuscules
+      let charCode = char.charCodeAt(0);
+      let shiftedCharCode = charCode + keyShift;
+      if (char.match(/[a-z]/)) {
+        if (shiftedCharCode > 122) {
+          shiftedCharCode -= 26;
+        } else if (shiftedCharCode < 97) {
+          shiftedCharCode += 26;
+        }
+      } else if (char.match(/[A-Z]/)) {
+        if (shiftedCharCode > 90) {
+          shiftedCharCode -= 26;
+        } else if (shiftedCharCode < 65) {
+          shiftedCharCode += 26;
+        }
+      }
+      encryptedText += String.fromCharCode(shiftedCharCode);
+      keyIndex++;
+    } else {
+      encryptedText += char;
+    }
+  }
+  return encryptedText;
+}
+
+function decrypt(text: string, key: string): string {
+  let decryptedText = "";
+  let keyIndex = 0;
+  for (let char of text) {
+    if (/[a-zA-Z]/.test(char)) {
+      let keyChar = key.charAt(keyIndex % key.length);
+      let keyShift = keyChar.charCodeAt(0) - 65; // Supposant que la clé est en majuscules
+      let charCode = char.charCodeAt(0);
+      let shiftedCharCode = charCode - keyShift;
+      if (char.match(/[a-z]/)) {
+        if (shiftedCharCode > 122) {
+          shiftedCharCode -= 26;
+        } else if (shiftedCharCode < 97) {
+          shiftedCharCode += 26;
+        }
+      } else if (char.match(/[A-Z]/)) {
+        if (shiftedCharCode > 90) {
+          shiftedCharCode -= 26;
+        } else if (shiftedCharCode < 65) {
+          shiftedCharCode += 26;
+        }
+      }
+      decryptedText += String.fromCharCode(shiftedCharCode);
+      keyIndex++;
+    } else {
+      decryptedText += char;
+    }
+  }
+  return decryptedText;
+}
