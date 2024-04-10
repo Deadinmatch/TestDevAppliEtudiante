@@ -885,6 +885,7 @@ const reponsea = document.getElementById("reponsea");
 const reponseaText = document.getElementById("reponseaText");
 let isDeleteForAll = false;
 let selectedMessageId: string = "";
+let start = true;
 
 const corespondanceIDNonce = [];
 function addCores(id, nonce) {
@@ -927,9 +928,10 @@ if (corespondanceIDNonceStock != null) {
     corespondanceIDNonce.push(c);
   });
 }
-let start = true;
 window.addEventListener("beforeunload", () => {
   localStorage.setItem("lastIndex", lastIndex);
+  localStorage.setItem("lightMode", "" + lightMode);
+
   localStorage.setItem("fileAttente", JSON.stringify(fileAttente));
   localStorage.setItem("messagesHistory", JSON.stringify(messagesHistory));
   localStorage.setItem(
@@ -1335,6 +1337,16 @@ function clickMsg(id) {
   }, 3000);
 }
 let lightMode = true;
+let lmstock = localStorage.getItem("lightMode");
+console.log("lmstock", lmstock);
+
+if (lmstock != null) {
+  lightMode = JSON.parse(lmstock);
+  console.log("lightmmod ", lightMode);
+}
+if (!lightMode) {
+  document.body.style.background = "black";
+}
 const switchTheme = () => {
   let theme = document.getElementById("theme");
   let dark = document.getElementById("dark");
