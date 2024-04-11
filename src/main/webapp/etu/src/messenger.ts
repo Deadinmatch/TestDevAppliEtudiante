@@ -115,7 +115,9 @@ async function setCasName() {
     const input = document.getElementById("receiver") as HTMLInputElement;
     input.value = "alice@univ-rennes.fr";
   }
+
   await loadHistory();
+
   displayOldMessages();
 }
 
@@ -363,6 +365,8 @@ async function deroulerProtocole(id: string, relance: boolean) {
         //let pbk: any = await fetchKey(globalUserName, true, true);
         //contentWithoutCode=await encryptWithPublicKey(pbk,contentWithoutCode)
         //save message in history
+        console.log("pushhhhhhhhh deroul");
+
         messagesHistory.push({
           refered: selectedMessageId,
           id: nonceA,
@@ -807,16 +811,19 @@ async function actionOnMessageOne(fromA: string, messageContent: string) {
   addingReceivedMessage(textToAdd);
   // let pbk: any = await fetchKey(globalUserName, true, true);
   // messageContent=await encryptWithPublicKey(pbk,messageContent)
-  messagesHistory.push({
-    id: idMessageRecu,
-    content: messageContent,
-    sender: fromA,
-    refered: selectedMessageIdLocal,
-    receiver: receiverStatic,
-    ak: false,
-    date: getDateFormat(),
-    nonceDebut: nonceA,
-  });
+  if (!messageHistoryContains(idMessageRecu)) {
+    console.log("pushhhhhhhhh action");
+    messagesHistory.push({
+      id: idMessageRecu,
+      content: messageContent,
+      sender: fromA,
+      refered: selectedMessageIdLocal,
+      receiver: receiverStatic,
+      ak: false,
+      date: getDateFormat(),
+      nonceDebut: nonceA,
+    });
+  }
 }
 
 //Index of the last read message
@@ -824,6 +831,8 @@ let lastIndexInHistory = 0;
 
 // function for refreshing the content of the window (automatic or manual see below)
 async function refresh() {
+  console.log("refresh");
+
   try {
     const user = globalUserName;
     const historyRequest = new HistoryRequest(user, lastIndexInHistory);
@@ -1126,14 +1135,19 @@ function goToMsg(id: string) {
 }
 
 async function loadHistory() {
+  messagesHistory = [];
   const messagesHistoryStock = JSON.parse(
     localStorage.getItem("messagesHistory")
   );
   if (messagesHistoryStock !== null) {
     // let pvk: any = await fetchKey(globalUserName, false, true);
-    messagesHistory = messagesHistoryStock.map((mh: any) => {
+    messagesHistoryStock.map((mh: any) => {
       //mh.content = decryptWithPrivateKey(pvk,mh.content);
-      return mh;
+      console.log("pushhhhhhhhh load");
+
+      if (!messageHistoryContains(mh.id)) {
+        messagesHistory.push(mh);
+      }
     });
   }
 }
@@ -1156,10 +1170,17 @@ function getMyMessage(message: any): string {
   let existingMsg = document.getElementById(message.id);
 
   if (existingMsg != null) {
+    //concatenation
     let msgContentTag = existingMsg.getElementsByClassName(
       "messageContent"
     )[0] as HTMLDivElement;
     msgContentTag.innerText += message.content;
+    for (let i = 0; i < messagesHistory.length; i++) {
+      const element = messagesHistory[i];
+      if (element.id == message.id) {
+        element.content += message.content;
+      }
+    }
     return "";
   }
 
@@ -1235,7 +1256,15 @@ function getHisMessage(message): string {
     let msgContentTag = existingMsg.getElementsByClassName(
       "messageContent"
     )[0] as HTMLDivElement;
-    msgContentTag.innerText += message.content;
+    if (msgContentTag.innerText != message.content) {
+      msgContentTag.innerText += message.content;
+      for (let i = 0; i < messagesHistory.length; i++) {
+        const element = messagesHistory[i];
+        if (element.id == message.id) {
+          element.content += message.content;
+        }
+      }
+    }
     return "";
   }
 
@@ -1404,5 +1433,12 @@ const copier = () => {
     copiedMessage.classList.add("hidden");
   }, 3000);
 };
+
+function messageHistoryContains(id: string): boolean {
+  let existingMsg = messagesHistory.filter((m) => {
+    return m.id == id;
+  });
+  return existingMsg.length != 0;
+}
 //scroll to the end of the conv
 window.scrollTo(0, document.body.scrollHeight);
