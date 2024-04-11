@@ -1007,7 +1007,7 @@ class FileAttente {
 let contactRequests: ExtMessage[] = [];
 setTimeout(async () => {
   const privkey = await fetchKey(globalUserName, false, true);
-  const alreadySentTo = []; //to prevent sending multiple connexion signal to the same person
+  const alreadySentTo: string[] = []; //to prevent sending multiple connexion signal to the same person
   for (let i = 0; i < contactRequests.length; i++) {
     const contactReq = contactRequests[i];
     if (contactReq == undefined) {
@@ -1020,7 +1020,10 @@ setTimeout(async () => {
 
     const messageArrayInClear = JSON.parse(messageInClearString) as string[];
     const messageSenderInMessage = messageArrayInClear[0];
-    if (alreadySentTo.includes(messageSenderInMessage)) {
+    let ex = alreadySentTo.filter((a) => {
+      return a == messageSenderInMessage;
+    });
+    if (ex.length != 0) {
       continue;
     }
     alreadySentTo.push(messageSenderInMessage);
@@ -1442,3 +1445,4 @@ function messageHistoryContains(id: string): boolean {
 }
 //scroll to the end of the conv
 window.scrollTo(0, document.body.scrollHeight);
+
