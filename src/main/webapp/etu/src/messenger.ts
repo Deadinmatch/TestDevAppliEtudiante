@@ -247,8 +247,11 @@ sendButton.onclick = async function () {
     return;
   }
   canSend = false;
-
+  //hide the refered message section if exists
+  reponsea.classList.add("hidden");
   if (messageHTML.value.length > 80) {
+    console.log("bigger than 80");
+
     let grandM = messageHTML.value;
     receiverStatic = receiver.value;
     messageHTML.value = "";
@@ -273,15 +276,15 @@ sendButton.onclick = async function () {
       let idMsg = getRandomNumber(100, 10000);
       fileAttente.addAttente(idMsg, receiverStatic, messageStatic);
 
-      await deroulerProtocole(idMsg, false);
+      let der = await deroulerProtocole(idMsg, false);
+      console.log("der", der);
+
       canSend = true;
       i += 80;
     }, 1500);
 
     return;
   }
-  //hide the refered message section if exists
-  reponsea.classList.add("hidden");
 
   receiverStatic = receiver.value;
   messageStatic = messageHTML.value;
