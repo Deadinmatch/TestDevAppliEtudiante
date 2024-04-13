@@ -247,9 +247,6 @@ sendButton.onclick = async function () {
     return;
   }
   canSend = false;
-  setTimeout(() => {
-    canSend = true;
-  }, 1000);
 
   if (messageHTML.value.length > 80) {
     let grandM = messageHTML.value;
@@ -275,7 +272,9 @@ sendButton.onclick = async function () {
       //ajout a la file d'attente
       let idMsg = getRandomNumber(100, 10000);
       fileAttente.addAttente(idMsg, receiverStatic, messageStatic);
+
       await deroulerProtocole(idMsg, false);
+      canSend = true;
       i += 80;
     }, 1500);
 
@@ -287,8 +286,6 @@ sendButton.onclick = async function () {
   receiverStatic = receiver.value;
   messageStatic = messageHTML.value;
   messageHTML.value = "";
-
-  console.log("isResponsing", isResponsing);
 
   //response and delete request cases
   if (isResponsing) {
@@ -304,8 +301,15 @@ sendButton.onclick = async function () {
   nonceA = generateNonce();
   fileAttente.addAttente(idMsg, receiverStatic, messageStatic);
   await deroulerProtocole(idMsg, false);
+  canSend = true;
 };
 //@param relance true si on deroule le protocole sur des messages deja envoyé mais qui sont relancé après connexion du receveur, false sinon
+/**
+ * A->B:A
+ * B->A:nonceb,b
+ * A->B:a,noncea,nonceb,s
+ * B->:b,noncea,s
+ */
 async function deroulerProtocole(id: string, relance: boolean) {
   // console.log(
   //   "hey " + receiverStatic + " je veux tchatcher avec toi(derouler protocole)"
@@ -362,12 +366,13 @@ async function deroulerProtocole(id: string, relance: boolean) {
         });
 
         addingReceivedMessage(textToAdd);
-        //let pbk: any = await fetchKey(globalUserName, true, true);
-        //contentWithoutCode=await encryptWithPublicKey(pbk,contentWithoutCode)
+        // let pbk: any = await fetchKey(globalUserName, true, true);
+        // contentWithoutCode = await encryptWithPublicKey(
+        //   pbk,
+        //   contentWithoutCode
+        // );
         //save message in history
-        console.log("pushhhhhhhhh deroul");
-
-        messagesHistory.push({
+        const m2 = {
           refered: selectedMessageId,
           id: nonceA,
           content: contentWithoutCode,
@@ -376,7 +381,10 @@ async function deroulerProtocole(id: string, relance: boolean) {
           ak: false,
           date: getDateFormat(),
           nonceDebut: nonceA,
-        });
+        };
+        console.log("m2", m2);
+
+        messagesHistory.push(m2);
       } else {
         //si c'est de la relace on considère que c'est bien recu
         let nonceID = getCoresNonceById(id);
@@ -441,19 +449,20 @@ async function analyseMessage(
         const messageArrayInClear = JSON.parse(
           messageInClearString
         ) as string[];
-        const messageSenderInMessage = messageArrayInClear[0];
+        let messageSenderInMessage = messageArrayInClear[0];
+        console.log("analyse message aray", messageArrayInClear);
+
         switch (messageArrayInClear.length) {
           //demande envoie de nonce pour authentifie
           case 1:
+            if (start) {
+              return;
+            }
+            console.log("case 1");
+
             const kb = await fetchKey(messageSenderInMessage, true, true);
             let agentName = globalUserName;
             nonceB = generateNonce();
-            // console.log(
-            //   messageSenderInMessage +
-            //     " , je sais que tu veux me parler donc tiens cette nonce " +
-            //     nonceB +
-            //     " (case 1)"
-            // );
 
             let contentToEncrypt = JSON.stringify([agentName, nonceB]);
             try {
@@ -482,47 +491,31 @@ async function analyseMessage(
             break;
           //reception de la nonce on renvoie le message avec la nonce
           case 2:
-            fileAttente.deleteAttente(messageSenderInMessage);
+            if (
+              messageSenderInMessage.includes("@") &&
+              messageSenderInMessage.includes(".")
+            ) {
+              console.log("case 2 du protocole");
+            } else {
+              console.log("case 2 du serveur");
+              return;
+            }
+
+            console.log("le tab du case 2", messageArrayInClear);
+
             if (messageSenderInMessage == messageSender) {
               const nonce = messageArrayInClear[1]; //nonce reçu
-
-              // console.log(
-              //   "merci pour ta nonce " +
-              //     nonce +
-              //     " je t'envoi le message: " +
-              //     messageStatic +
-              //     " et une none" +
-              //     nonceA +
-              //     "(case 2)"
-              // );
 
               let agentName = globalUserName;
               let contentToEncrypt: string;
               console.log("message envoyé messageStatic", messageStatic);
 
-              //   if (!isResponsing) {
-              //if the message we want to send is not refering a particular other message
               contentToEncrypt = JSON.stringify([
                 agentName,
                 nonce,
                 nonceA,
                 messageStatic,
               ]);
-              //   } else {
-              //     const messageToRepTo =
-              //       document.getElementById(selectedMessageId);
-              //     const messageContent = messageToRepTo.getElementsByClassName(
-              //       "messageContent"
-              //     )[0] as HTMLDivElement;
-              //     contentToEncrypt = JSON.stringify([
-              //       agentName,
-              //       nonce,
-              //       nonceA,
-              //       messageStatic,
-              //       messageContent.innerText,
-              //       "response",
-              //     ]);
-              //   }
 
               try {
                 const kb = await fetchKey(messageSenderInMessage, true, true);
@@ -560,6 +553,8 @@ async function analyseMessage(
             if (messageSenderInMessage === messageSender && nonce == nonceB) {
               const noncea = messageArrayInClear[2]; //nonce reçu
               idMessageRecu = noncea;
+              console.log(globalUserName + " a recu " + messageInClear);
+
               console.log(
                 messageArrayInClear,
                 " merci pour ce tableau avec ton secret dedans, tiens ta nonce:" +
@@ -607,6 +602,8 @@ async function analyseMessage(
             break;
 
           case 3: //reception de acquit --> 4.
+            console.log("case 3 je recoi ak je suis expediteur");
+
             const noncea = messageArrayInClear[1];
 
             //marquer le message dans messageshistory comme aquité
@@ -643,6 +640,7 @@ async function analyseMessage(
             break;
           case 5: //quelqu'un est devenu en ligne
             const userEnLigne = messageArrayInClear[0];
+            console.log("case 5", userEnLigne + " est devenu en ligne");
 
             //je le cherche dans me liste d'attente
             const attente = fileAttente.getAttenteByReceiver(userEnLigne);
@@ -659,7 +657,6 @@ async function analyseMessage(
                   let r = isResponsing;
                   let d = isDeleteForAll;
                   let m = attente.messages[i].content;
-
                   if (m != undefined && m.includes("r&r")) {
                     const split = m.split("r&r");
                     m = split[1];
@@ -671,6 +668,8 @@ async function analyseMessage(
                   }
                   const id = attente.messages[i].id;
                   const nonceDebut = attente.messages[i].nonceDebut;
+                  m = nonceDebut + "rl&" + m;
+
                   messagesHistory = messagesHistory.map((mh) => {
                     if (mh.id == nonceDebut) {
                       mh.ak = true;
@@ -690,28 +689,13 @@ async function analyseMessage(
             break;
 
           case 6:
-            /**form
-            *  JSON.stringify([
-                  agentName,
-                  nonce,
-                  nonceA,
-                  messageStatic,
-                  messageContent.innerText,
-                  "response",
-                ]);
-            */
+            console.log("case 6");
 
             const nonce6 = messageArrayInClear[1];
 
             const messageInClear6 = messageArrayInClear[3];
             if (messageSenderInMessage === messageSender && nonce6 == nonceB) {
               const noncea = messageArrayInClear[2]; //nonce reçu
-              console.log(
-                messageArrayInClear,
-                " merci pour ce tableau avec ton secret dedans, tiens ta nonce:" +
-                  noncea +
-                  "comme aquit(case 4)"
-              );
 
               let agentName = globalUserName;
               let contentToEncrypt = JSON.stringify([
@@ -734,7 +718,7 @@ async function analyseMessage(
                 );
                 if (!sendResult.success) console.log(sendResult.errorMessage);
                 else {
-                  console.log("Successfully sent the acquit !");
+                  // console.log("Successfully sent the acquit !");
                 }
               } catch (e) {
                 if (e instanceof Error) {
@@ -768,9 +752,9 @@ async function actionOnMessageOne(fromA: string, messageContent: string) {
   if (messageContent.trim() == "") {
     return;
   }
-  let referedMessageTag = "";
   let selectedMessageIdLocal = "";
   let rf = null;
+  let nonceDeb = "";
   if (messageContent.includes("r&r")) {
     const split = messageContent.split("r&r");
     selectedMessageIdLocal = split[0];
@@ -798,6 +782,10 @@ async function actionOnMessageOne(fromA: string, messageContent: string) {
     referedRealMessageTag.remove();
     deleteMessageFromHistory(selectedMessageIdLocal);
     return;
+  } else if (messageContent.includes("rl&")) {
+    let split = messageContent.split("rl&");
+    nonceDeb = split[0];
+    messageContent = split[1];
   }
 
   const textToAdd = getHisMessage({
@@ -810,9 +798,8 @@ async function actionOnMessageOne(fromA: string, messageContent: string) {
 
   addingReceivedMessage(textToAdd);
   // let pbk: any = await fetchKey(globalUserName, true, true);
-  // messageContent=await encryptWithPublicKey(pbk,messageContent)
+  // messageContent = await encryptWithPublicKey(pbk, messageContent);
   if (!messageHistoryContains(idMessageRecu)) {
-    console.log("pushhhhhhhhh action");
     messagesHistory.push({
       id: idMessageRecu,
       content: messageContent,
@@ -821,7 +808,7 @@ async function actionOnMessageOne(fromA: string, messageContent: string) {
       receiver: receiverStatic,
       ak: false,
       date: getDateFormat(),
-      nonceDebut: nonceA,
+      nonceDebut: nonceDeb,
     });
   }
 }
@@ -831,8 +818,6 @@ let lastIndexInHistory = 0;
 
 // function for refreshing the content of the window (automatic or manual see below)
 async function refresh() {
-  console.log("refresh");
-
   try {
     const user = globalUserName;
     const historyRequest = new HistoryRequest(user, lastIndexInHistory);
@@ -854,28 +839,35 @@ async function refresh() {
       // This is the place where you can perform trigger any operations for refreshing the page
       //addingReceivedMessage("Dummy message!")
       lastIndexInHistory = result.index;
+      let time = 50;
+
       if (start) {
+        time = 1000;
         for (let i = parseInt(lastIndex); i < result.index; i++) {
           const msg = result.allMessages[i];
-          contactRequests.push(msg);
+          contactRequests.push(msg.sender);
         }
+        console.log(contactRequests, "contactRequests");
+
         start = false;
       }
       lastIndex = result.index + "";
 
-      if (result.allMessages.length != 0) {
-        for (let i = 0; i < result.allMessages.length; i++) {
-          let [b, sender, msgContent] = await analyseMessage(
-            result.allMessages[i]
-          );
-          if (b) actionOnMessageOne(sender, msgContent);
-          else
-            console
-              .log
-              // "Msg " + result.allMessages[i] + " cannot be exploited by " + user
-              ();
+      setTimeout(async () => {
+        if (result.allMessages.length != 0) {
+          for (let i = 0; i < result.allMessages.length; i++) {
+            let [b, sender, msgContent] = await analyseMessage(
+              result.allMessages[i]
+            );
+            if (b) actionOnMessageOne(sender, msgContent);
+            else
+              console
+                .log
+                // "Msg " + result.allMessages[i] + " cannot be exploited by " + user
+                ();
+          }
         }
-      }
+      }, time);
     }
   } catch (error) {
     if (error instanceof Error) {
@@ -953,6 +945,13 @@ window.addEventListener("beforeunload", () => {
 
   //localStorage.clear();
 });
+/**mecanisme d'envoi meme quand b est hors ligne
+ * 1. a stocke tout les message dans la liste d'attente qui correspond au receveur
+ * 2. s'il recoit un ak alors il supprime tous les messages relatif a b,sinon il les garde dans fileAttente
+ * 3. quand b devient en ligne il va recevoir les identités de tout ce qui ont voulu lui envoyer quelque chose
+ * 4. à chaque identité il va envoyé un message de taille 5 pour leur signaler sa connexion
+ * 5.ce qui recoivent ce signal vont vider leur fileAttente relative à b suivant le protocol de base
+ */
 class Attente {
   constructor(public receiver: string, public messages: any[]) {}
 }
@@ -1004,30 +1003,23 @@ class FileAttente {
     });
   }
 }
-let contactRequests: ExtMessage[] = [];
-setTimeout(async () => {
-  const privkey = await fetchKey(globalUserName, false, true);
-  const alreadySentTo: string[] = []; //to prevent sending multiple connexion signal to the same person
-  for (let i = 0; i < contactRequests.length; i++) {
-    const contactReq = contactRequests[i];
-    if (contactReq == undefined) {
-      continue;
-    }
-    const messageInClearString = await decryptWithPrivateKey(
-      privkey,
-      contactReq.content
-    );
 
-    const messageArrayInClear = JSON.parse(messageInClearString) as string[];
-    const messageSenderInMessage = messageArrayInClear[0];
+let contactRequests: string[] = [];
+setTimeout(async () => {
+  await refresh();
+  const alreadySentTo: string[] = []; //to prevent sending multiple connexion signal to the same person
+  console.log("just avant d'envoi", contactRequests);
+
+  for (let i = 0; i < contactRequests.length; i++) {
+    const sender = contactRequests[i];
     let ex = alreadySentTo.filter((a) => {
-      return a == messageSenderInMessage;
+      return a == sender;
     });
     if (ex.length != 0) {
       continue;
     }
-    alreadySentTo.push(messageSenderInMessage);
-    const kb = await fetchKey(messageSenderInMessage, true, true);
+    alreadySentTo.push(sender);
+    const kb = await fetchKey(sender, true, true);
 
     //signaler que je suis en ligne
     const connexionSignalContent = JSON.stringify([
@@ -1041,17 +1033,17 @@ setTimeout(async () => {
       kb,
       connexionSignalContent
     );
-    console.log(messageSenderInMessage, "sait que je suis en ligne");
 
-    await sendMessage(
+    let s = await sendMessage(
       globalUserName,
-      messageSenderInMessage,
+      sender,
       connexionSignalContentEncrypted
     );
+    console.log(sender, "sait que je suis en ligne", s);
   }
 
   contactRequests = [];
-}, 2000);
+}, 500);
 const fileAttente: FileAttente = new FileAttente([]);
 const fileAttenteStock: FileAttente = JSON.parse(
   localStorage.getItem("fileAttente")
@@ -1143,10 +1135,9 @@ async function loadHistory() {
     localStorage.getItem("messagesHistory")
   );
   if (messagesHistoryStock !== null) {
-    // let pvk: any = await fetchKey(globalUserName, false, true);
+    //let pvk: any = await fetchKey(globalUserName, false, true);
     messagesHistoryStock.map((mh: any) => {
-      //mh.content = decryptWithPrivateKey(pvk,mh.content);
-      console.log("pushhhhhhhhh load");
+      //mh.content = decryptWithPrivateKey(pvk, mh.content);
 
       if (!messageHistoryContains(mh.id)) {
         messagesHistory.push(mh);
@@ -1243,13 +1234,16 @@ class="w-6 h-6 absolute top-1 left-1 cursor-pointer">
  }" class="text-center hidden text-sm text-gray-400" >${message.date}</div>
  </div>`;
 }
-function getHisMessage(message): string {
+function getHisMessage(message: any): string {
   if (
     message.date == undefined ||
     message.content.includes("d&d") ||
     message.content.length == 0
   ) {
     message.date = getDateFormat();
+  }
+  if (message.content == undefined) {
+    return "";
   }
 
   //big message case
@@ -1385,11 +1379,9 @@ function clickMsg(id) {
 let lightMode: boolean = true;
 
 let lmstock = localStorage.getItem("lightMode");
-console.log("lmstock", lmstock);
 
 if (lmstock != null) {
   lightMode = JSON.parse(lmstock);
-  console.log("lightmmod ", lightMode);
 }
 if (!lightMode) {
   document.body.style.background = "black";
@@ -1445,4 +1437,3 @@ function messageHistoryContains(id: string): boolean {
 }
 //scroll to the end of the conv
 window.scrollTo(0, document.body.scrollHeight);
-
