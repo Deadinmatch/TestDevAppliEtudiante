@@ -749,6 +749,8 @@ async function analyseMessage(
 // action for receiving message
 // 1. A -> B: A,{message}Kb
 async function actionOnMessageOne(fromA: string, messageContent: string) {
+  console.log("action content", messageContent);
+
   if (messageContent.trim() == "") {
     return;
   }
@@ -783,8 +785,11 @@ async function actionOnMessageOne(fromA: string, messageContent: string) {
     deleteMessageFromHistory(selectedMessageIdLocal);
     return;
   } else if (messageContent.includes("rl&")) {
+    console.log("relance action detected");
+
     let split = messageContent.split("rl&");
     nonceDeb = split[0];
+    idMessageRecu = split[0];
     messageContent = split[1];
   }
 
